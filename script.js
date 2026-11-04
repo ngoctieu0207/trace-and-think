@@ -487,7 +487,41 @@
     'l.mockQ': ['Does phone use at night affect sleep?', 'Dùng điện thoại ban đêm có ảnh hưởng giấc ngủ không?'],
     'l.mockTheme': ['Sleep', 'Giấc ngủ'],
     'l.mockTitle': ['Phone use after lights-out shortens sleep', 'Dùng điện thoại sau khi tắt đèn làm ngủ ít đi'],
-    'l.mockNote': ['Example only', 'Chỉ là ví dụ']
+    'l.mockNote': ['Example only', 'Chỉ là ví dụ'],
+
+    // Page guides (one short caption per picture)
+    'g.button': ['How to use', 'Cách dùng'],
+    'g.gotIt': ['Got it', 'Hiểu rồi'],
+    'g.hidden': ['Hidden. Tap “How to use” to see it again.', 'Đã ẩn. Bấm “Cách dùng” để xem lại.'],
+    'g.dashboard.t': ['Quick guide', 'Xem nhanh'],
+    'g.dashboard.1': ['One project per assignment', 'Mỗi bài tập một dự án'],
+    'g.dashboard.2': ['Follow the 4 steps', 'Làm theo 4 bước'],
+    'g.dashboard.3': ['Switch projects up here', 'Đổi dự án ở trên cùng'],
+    'g.projects.t': ['Quick guide', 'Xem nhanh'],
+    'g.projects.1': ['Click to open', 'Bấm để mở'],
+    'g.projects.2': ['Search by name or course', 'Tìm theo tên, mã môn'],
+    'g.projects.3': ['Bin to delete', 'Thùng rác để xoá'],
+    'g.evidence.t': ['Quick guide', 'Xem nhanh'],
+    'g.evidence.1': ['Add your PDFs', 'Thêm file PDF'],
+    'g.evidence.2': ['Ask or type keywords', 'Hỏi hoặc gõ từ khoá'],
+    'g.evidence.3': ['Save what you need', 'Lưu đoạn cần dùng'],
+    'g.evidence.4': ['Orange icon: add author, year', 'Icon cam: thêm tác giả, năm'],
+    'g.map.t': ['Quick guide', 'Xem nhanh'],
+    'g.map.1': ['Save 2+ quotes first', 'Lưu ít nhất 2 đoạn trước'],
+    'g.map.2': ['Click a theme to rename', 'Bấm chủ đề để đổi tên'],
+    'g.map.3': ['Click a quote, Connect, click another', 'Bấm đoạn, Nối, bấm đoạn kia'],
+    'g.map.4': ['Pick how they relate', 'Chọn kiểu liên kết'],
+    'g.map.5': ['Drag cards anywhere', 'Kéo thả tuỳ ý'],
+    'g.map.6': ['Dotted line: ✓ keep, ✕ hide', 'Đường chấm: ✓ giữ, ✕ bỏ'],
+    'g.builder.t': ['Quick guide', 'Xem nhanh'],
+    'g.builder.1': ['Write your main argument', 'Viết luận điểm chính'],
+    'g.builder.2': ['Add a section per point', 'Mỗi ý một phần'],
+    'g.builder.3': ['Drag quotes into a section', 'Kéo đoạn trích vào ý'],
+    'g.builder.4': ['Copy it with references', 'Chép ra kèm trích dẫn'],
+    'g.settings.t': ['Quick guide', 'Xem nhanh'],
+    'g.settings.1': ['Pick a reference style', 'Chọn kiểu trích dẫn'],
+    'g.settings.2': ['Switch language', 'Đổi ngôn ngữ'],
+    'g.settings.3': ['Wipe all data', 'Xoá sạch dữ liệu']
   };
 
   /* ------------------------------------------------------
@@ -636,7 +670,8 @@
       outlines: {},
       activity: [],
       userEvidence: {},
-      maps: {}
+      maps: {},
+      guidesHidden: {}
     };
   }
 
@@ -661,6 +696,7 @@
   let state = loadState();
   state.userEvidence ||= {};
   state.maps ||= {};
+  state.guidesHidden ||= {};
   // Older saves may still contain the removed sample project: drop it
   if (state.projects.some(p => p.isSample)) {
     state.projects = state.projects.filter(p => !p.isSample);
@@ -824,6 +860,7 @@
       $$('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.page === page));
       if (!currentProject() && ['evidence', 'map', 'builder'].includes(page)) renderNoProject(page);
       else RENDERERS[page]();
+      attachGuide(page);
       updateShell();
       closeSidebar();
     }
@@ -831,6 +868,87 @@
     if (!keepScroll) window.scrollTo({ top: 0 });
   }
   const refresh = () => renderPage({ keepScroll: true });
+
+  /* ---------- Page guides: little pictures of the real controls, with a few words each ---------- */
+  const gv = {
+    btn: (icon, label, cls = 'btn-outline') => `<span class="btn btn-sm ${cls}"><i data-lucide="${icon}"></i>${esc(label)}</span>`,
+    search: (text) => `<span class="gv-search"><i data-lucide="search"></i><span class="gv-typing">${esc(text)}</span></span>`,
+    card: (inner) => `<span class="gv-card"><span class="gv-line"></span><span class="gv-line short"></span>${inner || ''}</span>`,
+    cursor: (cls = '') => `<span class="gv-cursor ${cls}"><i data-lucide="mouse-pointer-2"></i></span>`
+  };
+  const GUIDES = {
+    dashboard: [
+      () => gv.btn('plus', t('dash.create'), 'btn-primary'),
+      () => `<span class="gv-steps">${[1, 2, 3, 4].map(n => `<span class="${n < 3 ? 'done' : ''}">${n < 3 ? '<i data-lucide="check"></i>' : n}</span>`).join('')}</span>`,
+      () => `<span class="gv-select"><i data-lucide="folder"></i>${esc(t('top.currentProject'))}<i data-lucide="chevron-down"></i></span>`
+    ],
+    projects: [
+      () => `<span class="gv-card wide"><span class="course-tag">COMM1078</span><span class="gv-line"></span><span class="gv-line short"></span></span>${gv.cursor('tap')}`,
+      () => gv.search('ENVI2205'),
+      () => `<span class="icon-btn sm danger gv-bin"><i data-lucide="trash-2"></i></span>`
+    ],
+    evidence: [
+      () => gv.btn('file-up', t('lib.addPdf')),
+      () => gv.search('wayang culture'),
+      () => gv.card(gv.btn('bookmark-plus', t('ev.save'))) ,
+      () => `<span class="gv-card"><span class="gv-line"></span><span class="gv-warn"><i data-lucide="circle-alert"></i>${esc(t('src.needsDetails'))}</span></span>`
+    ],
+    map: [
+      () => `<span class="gv-row">${gv.card()}${gv.card()}</span>`,
+      () => `<span class="theme-node gv-theme" style="--c:#5260c8"><span class="dot"></span>${esc(t('map.themeN', { n: 1 }))}<i data-lucide="pencil"></i></span>`,
+      () => `<svg class="gv-link" viewBox="0 0 160 60" aria-hidden="true"><rect x="4" y="14" width="44" height="32" rx="6"/><rect x="112" y="14" width="44" height="32" rx="6"/><line x1="48" y1="30" x2="112" y2="30"/></svg>${gv.cursor('link')}`,
+      () => `<span class="gv-badges">${['similar', 'different', 'contradicts'].map(tp => `<span class="conn-badge ${tp}"><i data-lucide="${CONN_ICONS[tp]}"></i>${esc(t('conn.' + tp))}</span>`).join('')}</span>`,
+      () => `<span class="gv-drag">${gv.card()}${gv.cursor('drag')}</span>`,
+      () => `<span class="gv-suggest"><svg viewBox="0 0 70 10" aria-hidden="true"><line x1="2" y1="5" x2="68" y2="5"/></svg><span class="icon-btn sm"><i data-lucide="check"></i></span><span class="icon-btn sm"><i data-lucide="x"></i></span></span>`
+    ],
+    builder: [
+      () => `<span class="gv-thesis"><i data-lucide="target"></i><span class="gv-line"></span></span>`,
+      () => gv.btn('plus', t('b.add'), 'btn-primary'),
+      () => `<span class="gv-drag into">${gv.card()}<i data-lucide="arrow-right" class="gv-arrow"></i><span class="gv-slot"></span>${gv.cursor('drag')}</span>`,
+      () => gv.btn('copy', t('b.copy'))
+    ],
+    settings: [
+      () => `<span class="gv-select">RMIT Harvard<i data-lucide="chevron-down"></i></span>`,
+      () => `<span class="lang-switch"><button class="${state.lang === 'en' ? 'active' : ''}" tabindex="-1">EN</button><button class="${state.lang === 'vi' ? 'active' : ''}" tabindex="-1">VI</button></span>`,
+      () => gv.btn('trash-2', t('set.reset'), 'btn-danger')
+    ]
+  };
+  function guideBlock(page) {
+    const steps = GUIDES[page];
+    if (!steps || state.guidesHidden[page]) return '';
+    return `
+      <section class="guide" aria-label="${t('g.button')}">
+        <div class="guide-head">
+          <h2><i data-lucide="book-open"></i>${t(`g.${page}.t`)}</h2>
+          <button class="btn btn-ghost btn-sm" data-action="hide-guide" data-page="${page}"><i data-lucide="check"></i>${t('g.gotIt')}</button>
+        </div>
+        <ol class="guide-tiles">
+          ${steps.map((visual, i) => `
+            <li class="guide-tile">
+              <span class="guide-num">${i + 1}</span>
+              <span class="guide-visual" aria-hidden="true">${visual()}</span>
+              <span class="guide-cap">${t(`g.${page}.${i + 1}`)}</span>
+            </li>`).join('')}
+        </ol>
+      </section>`;
+  }
+  /* Adds the guide under the page heading, plus a button to show or hide it */
+  function attachGuide(page) {
+    if (!GUIDES[page]) return;
+    const section = $('#page-' + page);
+    const anchor = section.querySelector('.page-header') || section.querySelector('.welcome');
+    if (!anchor) return;
+    anchor.insertAdjacentHTML('afterend', guideBlock(page));
+    const hidden = state.guidesHidden[page];
+    const btn = `<button class="btn btn-ghost btn-sm guide-toggle ${hidden ? '' : 'on'}" data-action="toggle-guide" data-page="${page}" aria-pressed="${!hidden}"><i data-lucide="book-open"></i>${t('g.button')}</button>`;
+    let actions = anchor.querySelector('.actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'actions';
+      anchor.appendChild(actions);
+    }
+    actions.insertAdjacentHTML('afterbegin', btn);
+  }
 
   function updateShell() {
     const p = currentProject();
@@ -2112,7 +2230,7 @@
     const H = Math.max(MAP_H, FIRST + maxRows * ROW);
     Object.keys(pos).forEach(key => {
       if (m.pos[key]) pos[key] = m.pos[key];
-      pos[key] = [Math.min(MAP_W - 70, Math.max(70, pos[key][0])), Math.min(H - 50, Math.max(40, pos[key][1]))];
+      pos[key] = [Math.min(MAP_W - 100, Math.max(100, pos[key][0])), Math.min(H - 60, Math.max(50, pos[key][1]))];
     });
     return { pos, H, columns: columns.length };
   }
@@ -2281,9 +2399,6 @@
             <div><strong style="color:var(--red)">${contra.length}</strong><span>${t('map.contras')}</span></div>
           </div>
         </div>
-        <div class="detail-section">
-          <h4>${t('map.howT')}</h4>
-          <ol class="how-list"><li>${t('map.how1')}</li><li>${t('map.how2')}</li><li>${t('map.how3')}</li></ol>
         </div>
         ${contra.length ? `<div class="detail-section"><h4>${t('map.tensions')}</h4><ul class="detail-list">
           ${contra.map(l => `<li><button class="detail-link" data-action="select-node" data-id="e:${l.a}">${connBadge('contradicts')}<strong>${esc(evidenceById(l.a)?.title || '')} ↔ ${esc(evidenceById(l.b)?.title || '')}</strong>${l.note ? `<small>${esc(l.note)}</small>` : ''}</button></li>`).join('')}
@@ -2367,7 +2482,7 @@
     mapDrag.moved = true;
     mapDrag.node.classList.add('dragging');
     const r = mapDrag.rect;
-    const x = Math.min(MAP_W - 60, Math.max(60, (e.clientX - r.left) / r.width * MAP_W));
+    const x = Math.min(MAP_W - 100, Math.max(100, (e.clientX - r.left) / r.width * MAP_W));
     const H = ui.mapH || MAP_H;
     const y = Math.min(H - 30, Math.max(30, (e.clientY - r.top) / r.height * H));
     mapDrag.pos = [x, y];
@@ -2863,6 +2978,8 @@
 
     // Tour
     'start-tour': () => startTour(),
+    'toggle-guide': (el) => { const pg = el.dataset.page; state.guidesHidden[pg] = !state.guidesHidden[pg]; persist(); refresh(); },
+    'hide-guide': (el) => { state.guidesHidden[el.dataset.page] = true; persist(); refresh(); toast(t('g.hidden'), { icon: 'book-open' }); },
     'tour-next': () => { if (tour.i >= TOUR.length - 1) endTour(true); else { tour.i++; showTourStep(); } },
     'tour-back': () => { if (tour.i > 0) { tour.i--; showTourStep(); } },
     'tour-skip': () => endTour(false),
