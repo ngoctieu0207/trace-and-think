@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trace &amp; Think — Research with clarity</title>
+  <meta name="description" content="Trace & Think is an academic research workspace for university students: organise sources, extract evidence, discover connections and build arguments." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Lucide icons (UMD build) -->
+  <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#dashboard" aria-label="Trace & Think home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="32" height="32">
+            <rect width="32" height="32" rx="8" fill="currentColor"/>
+            <path d="M9 22 L15 13 L23 18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="9" cy="22" r="2.6" fill="#fff"/>
+            <circle cx="15" cy="13" r="2.6" fill="#fff"/>
+            <circle cx="23" cy="18" r="2.6" fill="#fff"/>
+          </svg>
+        </span>
+        <span class="brand-text">
+          <strong>Trace &amp; Think</strong>
+          <small>Research with clarity</small>
+        </span>
+      </a>
+
+      <button class="btn btn-primary btn-block" data-action="open-new-project">
+        <i data-lucide="plus"></i> New research project
+      </button>
+
+      <nav class="nav">
+        <span class="nav-label">Workspace</span>
+        <a class="nav-item" href="#dashboard" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+        <a class="nav-item" href="#projects" data-page="projects"><i data-lucide="folder-open"></i><span>My Projects</span></a>
+
+        <span class="nav-label">Research flow</span>
+        <a class="nav-item" href="#evidence" data-page="evidence"><i data-lucide="library"></i><span>Evidence Library</span><span class="nav-count" id="navSavedCount"></span></a>
+        <a class="nav-item" href="#map" data-page="map"><i data-lucide="waypoints"></i><span>Insight Map</span></a>
+        <a class="nav-item" href="#builder" data-page="builder"><i data-lucide="list-tree"></i><span>Argument Builder</span></a>
+
+        <span class="nav-label">Account</span>
+        <a class="nav-item" href="#settings" data-page="settings"><i data-lucide="settings"></i><span>Settings</span></a>
+      </nav>
+
+      <div class="sidebar-footer" id="sidebarProject"></div>
+    </aside>
+    <div class="sidebar-backdrop" data-action="close-sidebar"></div>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" data-action="toggle-sidebar" aria-label="Open navigation">
+          <i data-lucide="menu"></i>
+        </button>
+
+        <div class="project-switch">
+          <span class="project-switch-icon"><i data-lucide="folder"></i></span>
+          <div class="project-switch-text">
+            <label for="projectSelect">Current project</label>
+            <div class="select-wrap">
+              <select id="projectSelect" aria-label="Switch project"></select>
+              <i data-lucide="chevron-down"></i>
+            </div>
+          </div>
+        </div>
+
+        <form class="topbar-search" id="globalSearchForm" role="search">
+          <i data-lucide="search"></i>
+          <input id="globalSearch" type="search" placeholder="Search evidence, sources, themes…" autocomplete="off" />
+          <kbd>/</kbd>
+        </form>
+
+        <div class="topbar-actions">
+          <button class="icon-btn" aria-label="Notifications" data-action="notifications">
+            <i data-lucide="bell"></i><span class="notif-dot"></span>
+          </button>
+          <button class="profile" data-action="go" data-page="settings" aria-label="Profile and settings">
+            <span class="avatar" id="avatar">AN</span>
+            <span class="profile-text"><strong id="profileName">Alex Nguyen</strong><small id="profileUni">Northbridge University</small></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="content" id="content">
+        <section class="page" id="page-dashboard" aria-label="Dashboard"></section>
+        <section class="page" id="page-projects" aria-label="My Projects"></section>
+        <section class="page" id="page-evidence" aria-label="Evidence Library"></section>
+        <section class="page" id="page-map" aria-label="Insight Map"></section>
+        <section class="page" id="page-builder" aria-label="Argument Builder"></section>
+        <section class="page" id="page-settings" aria-label="Settings"></section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ============ CREATE PROJECT MODAL ============ -->
+  <div class="modal-backdrop" id="projectModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <header class="modal-head">
+        <div>
+          <h2 id="modalTitle">Create a research project</h2>
+          <p>Start with a clear question — it guides how evidence is found and organised.</p>
+        </div>
+        <button class="icon-btn" data-action="close-modal" aria-label="Close"><i data-lucide="x"></i></button>
+      </header>
+
+      <form id="projectForm" class="modal-body" novalidate>
+        <div class="field">
+          <label for="pfTitle">Project title <span class="req">*</span></label>
+          <input id="pfTitle" name="title" type="text" maxlength="90" placeholder="e.g. Microplastics in Urban Waterways" required />
+          <small class="field-error" id="pfTitleError" hidden>Please give your project a title.</small>
+        </div>
+
+        <div class="field">
+          <label for="pfQuestion">Research question</label>
+          <textarea id="pfQuestion" name="question" rows="2" placeholder="What specific question are you trying to answer?"></textarea>
+          <small class="hint">A focused, answerable question leads to more relevant evidence.</small>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="pfCourse">Course / module</label>
+            <input id="pfCourse" name="course" type="text" maxlength="30" placeholder="e.g. ENVS 2100" />
+          </div>
+          <div class="field">
+            <label for="pfDue">Due date</label>
+            <input id="pfDue" name="due" type="date" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pfDesc">Short description</label>
+          <textarea id="pfDesc" name="description" rows="3" placeholder="What is this project for, and what do you hope to find?"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="label">Source documents</span>
+          <label class="dropzone" id="dropzone" for="projectFiles">
+            <i data-lucide="file-up"></i>
+            <strong>Drop PDF files here or <u>browse</u></strong>
+            <small>PDF only · files stay on your device in this prototype</small>
+          </label>
+          <input type="file" id="projectFiles" accept=".pdf,application/pdf" multiple hidden />
+          <ul class="file-list" id="projectFileList"></ul>
+        </div>
+      </form>
+
+      <footer class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-action="close-modal">Cancel</button>
+        <button class="btn btn-primary" type="submit" form="projectForm"><i data-lucide="check"></i> Create Project</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Hidden input for adding sources to the current project -->
+  <input type="file" id="sourceUpload" accept=".pdf,application/pdf" multiple hidden />
+
+  <div class="toast-region" id="toasts" aria-live="polite"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
