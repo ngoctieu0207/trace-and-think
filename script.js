@@ -442,7 +442,7 @@
     'l.cta2': ['How it works', 'Xem cách sử dụng'],
     'l.ctaNote': ['Free, no sign-up. Your files stay on your computer.', 'Miễn phí và không cần đăng ký. Tài liệu của bạn chỉ nằm trên máy của bạn.'],
     'l.probT': ['Every semester, the same research struggle', 'Học kỳ nào cũng gặp cùng một khó khăn khi nghiên cứu'],
-    'l.probS': ['Every semester brings research and far too much to read. Finding sources, reading, remembering and turning notes into an argument are all hard. On top of that, checking every reference against RMIT’s format takes ages.', 'Mỗi học kỳ, sinh viên đều phải làm nghiên cứu với khối lượng tài liệu rất lớn. Từ tìm tài liệu, đọc, ghi nhớ cho đến biến ghi chú thành lập luận, bước nào cũng tốn nhiều công sức. Sau đó, việc kiểm tra lại trích dẫn theo đúng định dạng của RMIT cũng mất rất nhiều thời gian.'],
+    'l.probS': ['Every semester brings research and far too much to read. Finding sources, reading, remembering and turning notes into an argument are all hard.', 'Mỗi học kỳ, sinh viên đều phải làm nghiên cứu với khối lượng tài liệu rất lớn. Từ tìm tài liệu, đọc, ghi nhớ cho đến biến ghi chú thành lập luận, bước nào cũng tốn nhiều công sức.'],
     'l.p1t': ['100 tabs, nowhere to take notes', 'Mở hàng trăm tab nhưng không có chỗ ghi chú'],
     'l.p1b': ['PDFs are open everywhere, with no single place to keep the parts that matter.', 'Tài liệu PDF mở khắp nơi nhưng không có một chỗ chung để lưu lại những đoạn quan trọng.'],
     'l.p2t': ['“Which file was that quote in?”', 'Không nhớ câu trích nằm ở tài liệu nào'],
