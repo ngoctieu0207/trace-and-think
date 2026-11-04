@@ -26,7 +26,7 @@
      ------------------------------------------------------ */
   const STR = {
     // Shell
-    'brand.tagline': ['Research with clarity', 'Nghiên cứu rõ ràng'],
+    'brand.tagline': ['Research with clarity', 'Nghiên cứu mạch lạc'],
     'nav.workspace': ['Workspace', 'Chung'],
     'nav.flow': ['Research steps', 'Các bước nghiên cứu'],
     'nav.account': ['Account', 'Tài khoản'],
@@ -38,12 +38,12 @@
     'nav.settings': ['Settings', 'Cài đặt'],
     'nav.intro': ['About Trace & Think', 'Giới thiệu'],
     'nav.newProject': ['New project', 'Tạo dự án'],
-    'top.currentProject': ['Current project', 'Dự án hiện tại'],
+    'top.currentProject': ['Current project', 'Dự án'],
     'top.search': ['Search your sources…', 'Tìm trong tài liệu…'],
     'top.help': ['Show me around', 'Xem hướng dẫn'],
     'top.menu': ['Open menu', 'Mở menu'],
     'top.noProject': ['No project yet', 'Chưa có dự án'],
-    'side.active': ['Working on', 'Dự án hiện tại'],
+    'side.active': ['Working on', 'Dự án'],
     'side.stages': ['{n} of 4 steps', 'Đã xong {n}/4 bước'],
     'user.guest': ['Student', 'Sinh viên'],
 
@@ -435,7 +435,7 @@
     'l.rmit': ['For RMIT students', 'Dành cho sinh viên RMIT'],
     'l.open': ['Open the app', 'Mở ứng dụng'],
     'l.eyebrow': ['A research workspace for RMIT students', 'Không gian nghiên cứu dành cho sinh viên RMIT'],
-    'l.h1a': ['Research with clarity.', 'Nghiên cứu rõ ràng.'],
+    'l.h1a': ['Research with clarity.', 'Nghiên cứu mạch lạc.'],
     'l.h1b': ['Think with evidence.', 'Lập luận có dẫn chứng.'],
     'l.lead': ['Drop in the PDFs for your assignment, ask them questions, keep the quotes that matter and turn them into an outline. Every quote stays linked to its file and page, so citing is the easy part.', 'Bạn thêm tài liệu PDF của bài tập, đặt câu hỏi, lưu lại những đoạn quan trọng và biến chúng thành dàn ý. Mỗi đoạn trích đều gắn với tên tài liệu và số trang, giúp việc trích dẫn trở nên đơn giản hơn.'],
     'l.cta': ['Get started', 'Bắt đầu'],
