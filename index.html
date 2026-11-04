@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trace &amp; Think — Research with clarity</title>
-  <meta name="description" content="Trace & Think is an academic research workspace for university students: organise sources, extract evidence, discover connections and build arguments." />
+  <title>Trace &amp; Think</title>
+  <meta name="description" content="Trace & Think is an academic research workspace for RMIT students: organise sources, extract evidence, discover connections and build well-referenced arguments." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,12 +13,21 @@
 
   <!-- Lucide icons (UMD build) -->
   <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+  <!-- PDF.js (Mozilla) reads the text of uploaded PDFs in the browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- MiniSearch ranks passages for search and questions -->
+  <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.0/dist/umd/index.min.js"></script>
+  <!-- Tesseract.js (OCR for scanned pages) is loaded on demand by script.js -->
+
 </head>
 <body>
-  <div class="app">
+  <!-- ============ LANDING PAGE (rendered by script.js) ============ -->
+  <div class="landing" id="landing" hidden></div>
+
+  <div class="app" id="app">
     <!-- ============ SIDEBAR ============ -->
     <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-      <a class="brand" href="#dashboard" aria-label="Trace & Think home">
+      <a class="brand" href="#home" aria-label="Trace & Think">
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 32 32" width="32" height="32">
             <rect width="32" height="32" rx="8" fill="currentColor"/>
@@ -30,26 +39,27 @@
         </span>
         <span class="brand-text">
           <strong>Trace &amp; Think</strong>
-          <small>Research with clarity</small>
+          <small data-i18n="brand.tagline">Research with clarity</small>
         </span>
       </a>
 
-      <button class="btn btn-primary btn-block" data-action="open-new-project">
-        <i data-lucide="plus"></i> New research project
+      <button class="btn btn-primary btn-block" data-action="open-new-project" data-tour="new-project">
+        <i data-lucide="plus"></i> <span data-i18n="nav.newProject">New research project</span>
       </button>
 
       <nav class="nav">
-        <span class="nav-label">Workspace</span>
-        <a class="nav-item" href="#dashboard" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
-        <a class="nav-item" href="#projects" data-page="projects"><i data-lucide="folder-open"></i><span>My Projects</span></a>
+        <span class="nav-label" data-i18n="nav.workspace">Workspace</span>
+        <a class="nav-item" href="#dashboard" data-page="dashboard"><i data-lucide="layout-dashboard"></i><span data-i18n="nav.dashboard">Dashboard</span></a>
+        <a class="nav-item" href="#projects" data-page="projects"><i data-lucide="folder-open"></i><span data-i18n="nav.projects">My Projects</span></a>
 
-        <span class="nav-label">Research flow</span>
-        <a class="nav-item" href="#evidence" data-page="evidence"><i data-lucide="library"></i><span>Evidence Library</span><span class="nav-count" id="navSavedCount"></span></a>
-        <a class="nav-item" href="#map" data-page="map"><i data-lucide="waypoints"></i><span>Insight Map</span></a>
-        <a class="nav-item" href="#builder" data-page="builder"><i data-lucide="list-tree"></i><span>Argument Builder</span></a>
+        <span class="nav-label" data-i18n="nav.flow">Research flow</span>
+        <a class="nav-item" href="#evidence" data-page="evidence"><i data-lucide="library"></i><span data-i18n="nav.evidence">Evidence Library</span><span class="nav-count" id="navSavedCount"></span></a>
+        <a class="nav-item" href="#map" data-page="map"><i data-lucide="waypoints"></i><span data-i18n="nav.map">Insight Map</span></a>
+        <a class="nav-item" href="#builder" data-page="builder"><i data-lucide="list-tree"></i><span data-i18n="nav.builder">Argument Builder</span></a>
 
-        <span class="nav-label">Account</span>
-        <a class="nav-item" href="#settings" data-page="settings"><i data-lucide="settings"></i><span>Settings</span></a>
+        <span class="nav-label" data-i18n="nav.account">Account</span>
+        <a class="nav-item" href="#settings" data-page="settings"><i data-lucide="settings"></i><span data-i18n="nav.settings">Settings</span></a>
+        <a class="nav-item" href="#home"><i data-lucide="info"></i><span data-i18n="nav.intro">About Trace &amp; Think</span></a>
       </nav>
 
       <div class="sidebar-footer" id="sidebarProject"></div>
@@ -59,14 +69,14 @@
     <!-- ============ MAIN ============ -->
     <div class="main">
       <header class="topbar">
-        <button class="icon-btn menu-btn" data-action="toggle-sidebar" aria-label="Open navigation">
+        <button class="icon-btn menu-btn" data-action="toggle-sidebar" data-i18n-aria="top.menu" aria-label="Open navigation">
           <i data-lucide="menu"></i>
         </button>
 
         <div class="project-switch">
           <span class="project-switch-icon"><i data-lucide="folder"></i></span>
           <div class="project-switch-text">
-            <label for="projectSelect">Current project</label>
+            <label for="projectSelect" data-i18n="top.currentProject">Current project</label>
             <div class="select-wrap">
               <select id="projectSelect" aria-label="Switch project"></select>
               <i data-lucide="chevron-down"></i>
@@ -76,28 +86,35 @@
 
         <form class="topbar-search" id="globalSearchForm" role="search">
           <i data-lucide="search"></i>
-          <input id="globalSearch" type="search" placeholder="Search evidence, sources, themes…" autocomplete="off" />
+          <input id="globalSearch" type="search" data-i18n-ph="top.search" placeholder="Search evidence, sources, themes…" autocomplete="off" />
           <kbd>/</kbd>
         </form>
 
         <div class="topbar-actions">
-          <button class="icon-btn" aria-label="Notifications" data-action="notifications">
+          <div class="lang-switch" id="langSwitch" role="group" aria-label="Language">
+            <button data-action="set-lang" data-lang="en">EN</button>
+            <button data-action="set-lang" data-lang="vi">VI</button>
+          </div>
+          <button class="icon-btn" data-action="start-tour" data-i18n-aria="top.help" aria-label="Take the tour" id="helpBtn">
+            <i data-lucide="circle-help"></i>
+          </button>
+          <button class="icon-btn" data-action="notifications" data-i18n-aria="top.notifications" aria-label="Notifications">
             <i data-lucide="bell"></i><span class="notif-dot"></span>
           </button>
           <button class="profile" data-action="go" data-page="settings" aria-label="Profile and settings">
-            <span class="avatar" id="avatar">AN</span>
-            <span class="profile-text"><strong id="profileName">Alex Nguyen</strong><small id="profileUni">Northbridge University</small></span>
+            <span class="avatar" id="avatar"></span>
+            <span class="profile-text"><strong id="profileName">Student</strong><small id="profileUni">RMIT University</small></span>
           </button>
         </div>
       </header>
 
       <main class="content" id="content">
-        <section class="page" id="page-dashboard" aria-label="Dashboard"></section>
-        <section class="page" id="page-projects" aria-label="My Projects"></section>
-        <section class="page" id="page-evidence" aria-label="Evidence Library"></section>
-        <section class="page" id="page-map" aria-label="Insight Map"></section>
-        <section class="page" id="page-builder" aria-label="Argument Builder"></section>
-        <section class="page" id="page-settings" aria-label="Settings"></section>
+        <section class="page" id="page-dashboard"></section>
+        <section class="page" id="page-projects"></section>
+        <section class="page" id="page-evidence"></section>
+        <section class="page" id="page-map"></section>
+        <section class="page" id="page-builder"></section>
+        <section class="page" id="page-settings"></section>
       </main>
     </div>
   </div>
@@ -107,47 +124,47 @@
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <header class="modal-head">
         <div>
-          <h2 id="modalTitle">Create a research project</h2>
-          <p>Start with a clear question — it guides how evidence is found and organised.</p>
+          <h2 id="modalTitle" data-i18n="modal.title">Create a research project</h2>
+          <p data-i18n="modal.sub">One project per assignment works best.</p>
         </div>
         <button class="icon-btn" data-action="close-modal" aria-label="Close"><i data-lucide="x"></i></button>
       </header>
 
       <form id="projectForm" class="modal-body" novalidate>
         <div class="field">
-          <label for="pfTitle">Project title <span class="req">*</span></label>
-          <input id="pfTitle" name="title" type="text" maxlength="90" placeholder="e.g. Microplastics in Urban Waterways" required />
-          <small class="field-error" id="pfTitleError" hidden>Please give your project a title.</small>
+          <label for="pfTitle"><span data-i18n="modal.ptitle">Project title</span> <span class="req">*</span></label>
+          <input id="pfTitle" name="title" type="text" maxlength="90" data-i18n-ph="modal.ptitlePh" required />
+          <small class="field-error" id="pfTitleError" hidden data-i18n="modal.titleError">Please give your project a title.</small>
         </div>
 
         <div class="field">
-          <label for="pfQuestion">Research question</label>
-          <textarea id="pfQuestion" name="question" rows="2" placeholder="What specific question are you trying to answer?"></textarea>
-          <small class="hint">A focused, answerable question leads to more relevant evidence.</small>
+          <label for="pfQuestion" data-i18n="modal.question">Research question</label>
+          <textarea id="pfQuestion" name="question" rows="2" data-i18n-ph="modal.questionPh"></textarea>
+          <small class="hint" data-i18n="modal.questionHint">A focused, answerable question leads to more relevant evidence.</small>
         </div>
 
         <div class="field-row">
           <div class="field">
-            <label for="pfCourse">Course / module</label>
-            <input id="pfCourse" name="course" type="text" maxlength="30" placeholder="e.g. ENVS 2100" />
+            <label for="pfCourse" data-i18n="modal.course">Course code</label>
+            <input id="pfCourse" name="course" type="text" maxlength="30" placeholder="e.g. COSC2627" />
           </div>
           <div class="field">
-            <label for="pfDue">Due date</label>
+            <label for="pfDue" data-i18n="modal.due">Due date</label>
             <input id="pfDue" name="due" type="date" />
           </div>
         </div>
 
         <div class="field">
-          <label for="pfDesc">Short description</label>
-          <textarea id="pfDesc" name="description" rows="3" placeholder="What is this project for, and what do you hope to find?"></textarea>
+          <label for="pfDesc" data-i18n="modal.desc">Short description</label>
+          <textarea id="pfDesc" name="description" rows="3" data-i18n-ph="modal.descPh"></textarea>
         </div>
 
         <div class="field">
-          <span class="label">Source documents</span>
+          <span class="label" data-i18n="modal.sources">Source documents</span>
           <label class="dropzone" id="dropzone" for="projectFiles">
             <i data-lucide="file-up"></i>
-            <strong>Drop PDF files here or <u>browse</u></strong>
-            <small>PDF only · files stay on your device in this prototype</small>
+            <strong data-i18n="modal.drop">Drop PDF files here or browse</strong>
+            <small data-i18n="modal.dropHint">PDF only · files stay on your device in this prototype</small>
           </label>
           <input type="file" id="projectFiles" accept=".pdf,application/pdf" multiple hidden />
           <ul class="file-list" id="projectFileList"></ul>
@@ -155,8 +172,26 @@
       </form>
 
       <footer class="modal-foot">
-        <button class="btn btn-ghost" type="button" data-action="close-modal">Cancel</button>
-        <button class="btn btn-primary" type="submit" form="projectForm"><i data-lucide="check"></i> Create Project</button>
+        <button class="btn btn-ghost" type="button" data-action="close-modal" data-i18n="common.cancel">Cancel</button>
+        <button class="btn btn-primary" type="submit" form="projectForm"><i data-lucide="check"></i> <span data-i18n="modal.create">Create Project</span></button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ============ REFERENCE LIST MODAL ============ -->
+  <div class="modal-backdrop" id="refModal" hidden>
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="refTitle">
+      <header class="modal-head">
+        <div>
+          <h2 id="refTitle" data-i18n="ref.title">Reference list</h2>
+          <p id="refSub"></p>
+        </div>
+        <button class="icon-btn" data-action="close-ref" aria-label="Close"><i data-lucide="x"></i></button>
+      </header>
+      <div class="modal-body" id="refBody"></div>
+      <footer class="modal-foot">
+        <button class="btn btn-ghost" type="button" data-action="close-ref" data-i18n="common.close">Close</button>
+        <button class="btn btn-primary" type="button" data-action="copy-ref-list"><i data-lucide="copy"></i> <span data-i18n="ref.copyAll">Copy reference list</span></button>
       </footer>
     </div>
   </div>

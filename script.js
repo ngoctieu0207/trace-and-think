@@ -1,248 +1,647 @@
 /* =========================================================
-   Trace & Think — Front-end prototype logic
+   Trace & Think: Front-end prototype logic
    ---------------------------------------------------------
-   1. Sample data (themes, sources, evidence, connections)
-   2. State + persistence (localStorage)
-   3. Helpers
-   4. Router & shell (sidebar, topbar)
-   5. Page renderers
-   6. Event handling
+   1. Translations (EN / VI)
+   2. Sample data (themes, sources, evidence, connections)
+   3. Referencing (the RMIT Easy Cite styles)
+   4. State + persistence (localStorage)
+   5. Helpers
+   6. Router & shell
+   7. Landing page
+   8. App page renderers
+   9. Onboarding tour
+   10. Event handling
    All "AI" output is mocked. No backend is used.
    ========================================================= */
 (() => {
   'use strict';
 
   const STORAGE_KEY = 'traceThink.state';
-  const STATE_VERSION = 3;
+  const STATE_VERSION = 5;
   const HOUR = 36e5;
   const DAY = 24 * HOUR;
-  const DEMO_PROJECT = 'p1';
 
   /* ------------------------------------------------------
-     1. SAMPLE DATA  (all sources are fictional examples)
+     1. TRANSLATIONS: each key holds [English, Vietnamese]
      ------------------------------------------------------ */
-  const THEMES = {
-    usage: {
-      id: 'usage', name: 'Usage Intensity', color: '#5260c8',
-      description: 'How much — and how — adolescents use social media: total screen time, heavy-use thresholds and passive versus active engagement.'
-    },
-    comparison: {
-      id: 'comparison', name: 'Social Comparison', color: '#a86a32',
-      description: 'Upward comparison with peers and influencers on image-based platforms, and its relationship with self-esteem and body image.'
-    },
-    sleep: {
-      id: 'sleep', name: 'Sleep Disruption', color: '#357d97',
-      description: 'Night-time phone use, shortened or poorer-quality sleep, and sleep as a pathway between social media and low mood.'
-    },
-    support: {
-      id: 'support', name: 'Connection & Support', color: '#3d8a66',
-      description: 'Positive effects: peer support, reduced isolation and feeling connected — especially for young people with limited offline support.'
-    }
+  const STR = {
+    // Shell
+    'brand.tagline': ['Research with clarity', 'Nghiên cứu cho rõ ràng'],
+    'nav.workspace': ['Workspace', 'Chung'],
+    'nav.flow': ['Research steps', 'Các bước làm bài'],
+    'nav.account': ['Account', 'Tài khoản'],
+    'nav.dashboard': ['Dashboard', 'Trang chính'],
+    'nav.projects': ['My Projects', 'Dự án của tôi'],
+    'nav.evidence': ['Evidence Library', 'Kho trích dẫn'],
+    'nav.map': ['Insight Map', 'Sơ đồ ý'],
+    'nav.builder': ['Argument Builder', 'Dàn ý'],
+    'nav.settings': ['Settings', 'Cài đặt'],
+    'nav.intro': ['About Trace & Think', 'Giới thiệu'],
+    'nav.newProject': ['New project', 'Tạo dự án'],
+    'top.currentProject': ['Current project', 'Đang làm'],
+    'top.search': ['Search your sources…', 'Tìm trong tài liệu…'],
+    'top.help': ['Show me around', 'Xem hướng dẫn'],
+    'top.menu': ['Open menu', 'Mở menu'],
+    'top.notifications': ['Notifications', 'Thông báo'],
+    'top.noNotif': ['Nothing new right now.', 'Chưa có gì mới.'],
+    'top.noProject': ['No project yet', 'Chưa có dự án'],
+    'side.active': ['Working on', 'Đang làm'],
+    'side.stages': ['{n} of 4 steps', '{n}/4 bước'],
+    'user.guest': ['Student', 'Sinh viên'],
+
+    // Common
+    'common.cancel': ['Cancel', 'Huỷ'],
+    'common.close': ['Close', 'Đóng'],
+    'common.edit': ['Edit', 'Sửa'],
+    'common.viewAll': ['See all', 'Xem hết'],
+    'common.sources': ['{n} sources', '{n} tài liệu'],
+    'common.source1': ['1 source', '1 tài liệu'],
+    'common.evCards': ['{n} saved quotes', '{n} đoạn đã lưu'],
+    'common.edited': ['Edited {t}', 'Sửa {t}'],
+    'common.active': ['Open', 'Đang mở'],
+    'common.page': ['p. {n}', 'tr. {n}'],
+    'common.clearFilters': ['Clear filters', 'Bỏ lọc'],
+
+    // Time
+    'time.now': ['just now', 'vừa xong'],
+    'time.min': ['{n} min ago', '{n} phút trước'],
+    'time.hour': ['an hour ago', '1 tiếng trước'],
+    'time.hours': ['{n} hours ago', '{n} tiếng trước'],
+    'time.yesterday': ['yesterday', 'hôm qua'],
+    'time.days': ['{n} days ago', '{n} ngày trước'],
+
+    // Dashboard
+    'dash.morning': ['Good morning', 'Chào buổi sáng'],
+    'dash.afternoon': ['Good afternoon', 'Chào buổi chiều'],
+    'dash.evening': ['Good evening', 'Chào buổi tối'],
+    'dash.sub': ['Pick up where you left off, or start something new.', 'Làm tiếp chỗ đang dở, hoặc bắt đầu dự án mới.'],
+    'dash.create': ['New project', 'Tạo dự án'],
+    'dash.statProjects': ['Projects', 'Dự án'],
+    'dash.statSources': ['PDFs', 'File PDF'],
+    'dash.statEvidence': ['Saved quotes', 'Đoạn đã lưu'],
+    'dash.statSections': ['Outline sections', 'Ý trong dàn ý'],
+    'dash.continue': ['Keep going', 'Làm tiếp'],
+    'dash.noQuestion': ['You haven’t written a research question yet.', 'Bạn chưa ghi câu hỏi nghiên cứu.'],
+    'dash.complete': ['{n}% done', 'Xong {n}%'],
+    'dash.step': ['Step {n}', 'Bước {n}'],
+    'dash.s1': ['Add your PDFs', 'Thêm file PDF'],
+    'dash.s1m': ['{n} added', 'Đã thêm {n} file'],
+    'dash.s2': ['Save quotes', 'Lưu đoạn trích'],
+    'dash.s2m': ['{n} saved', 'Đã lưu {n} đoạn'],
+    'dash.s3': ['Map the ideas', 'Sắp xếp ý'],
+    'dash.s3m': ['{a} themes, {b} links', '{a} chủ đề, {b} liên kết'],
+    'dash.s3w': ['Not yet', 'Chưa làm'],
+    'dash.s4': ['Write the outline', 'Viết dàn ý'],
+    'dash.s4m': ['{n} sections', '{n} ý'],
+    'dash.s4w': ['Not yet', 'Chưa làm'],
+    'dash.recent': ['Recent projects', 'Dự án gần đây'],
+    'dash.activity': ['Recent activity', 'Mới làm gần đây'],
+    'dash.noActivity': ['Nothing here yet.', 'Chưa có gì.'],
+    'dash.newHere': ['First time here? There’s a quick walkthrough, about a minute.', 'Lần đầu dùng? Có hướng dẫn nhanh, tầm 1 phút thôi.'],
+    'dash.startTour': ['Show me', 'Xem hướng dẫn'],
+
+    // Empty account
+    'np.title': ['No projects yet', 'Chưa có dự án nào'],
+    'np.sub': ['Make a project for your assignment, add the PDFs you’re reading, and start asking them questions.', 'Tạo một dự án cho bài tập, thêm các file PDF bạn đang đọc rồi đặt câu hỏi cho chúng.'],
+
+    // Projects
+    'proj.sub': ['One project per assignment. Each keeps its own PDFs, quotes, map and outline.', 'Mỗi bài tập là một dự án, có file PDF, đoạn trích, sơ đồ và dàn ý riêng.'],
+    'proj.new': ['New project', 'Tạo dự án'],
+    'proj.search': ['Search projects…', 'Tìm dự án…'],
+    'proj.createCard': ['New project', 'Tạo dự án'],
+    'proj.noMatch': ['Nothing matches “{q}”', 'Không có dự án nào khớp “{q}”'],
+    'proj.tryOther': ['Try another word.', 'Thử từ khác xem.'],
+    'proj.noQuestion': ['No research question yet.', 'Chưa có câu hỏi nghiên cứu.'],
+    'proj.delete': ['Delete project', 'Xoá dự án'],
+    'proj.confirmDelete': ['Delete “{t}”? Its PDFs, saved quotes, map and outline will be removed from this browser.', 'Xoá “{t}”? File PDF, đoạn đã lưu, sơ đồ và dàn ý của dự án này sẽ bị xoá khỏi trình duyệt.'],
+    'proj.deleted': ['Project deleted', 'Đã xoá dự án'],
+    'proj.switched': ['Now working on {t}', 'Đã chuyển sang {t}'],
+
+    // Evidence library
+    'lib.sub': ['Ask your PDFs a question or search them. Keep the quotes you need, each one tied to its file and page.', 'Hỏi hoặc tìm trong các file PDF của bạn. Lưu lại những đoạn cần dùng, đoạn nào cũng ghi rõ file và số trang.'],
+    'lib.addPdf': ['Add PDF', 'Thêm PDF'],
+    'lib.refList': ['Reference list', 'Danh mục tham khảo'],
+    'lib.realNotice': ['Your PDFs are read here in the browser and never leave your computer. Scanned pages are read with OCR.', 'File PDF được đọc ngay trên trình duyệt, không gửi đi đâu cả. Trang scan thì web dùng OCR để đọc chữ.'],
+    'lib.sources': ['Your PDFs', 'File PDF'],
+    'lib.allSources': ['All files', 'Tất cả file'],
+    'lib.allSourcesSub': ['Search everything', 'Tìm trong mọi file'],
+    'lib.upload': ['Add PDFs', 'Thêm PDF'],
+    'lib.ask': ['Ask your PDFs', 'Hỏi tài liệu'],
+    'lib.askSub': ['You’ll get the sentences from your files that answer it best, with page numbers.', 'Web sẽ lấy những câu trong file trả lời sát nhất, kèm số trang.'],
+    'lib.askPh': ['e.g. How did wayang kulit influence Indonesian culture?', 'VD: How did wayang kulit influence Indonesian culture?'],
+    'lib.askBtn': ['Ask', 'Hỏi'],
+    'lib.results': ['Results', 'Kết quả'],
+    'lib.saved': ['Saved', 'Đã lưu'],
+    'lib.searchPh': ['Search inside your PDFs…', 'Tìm trong file PDF…'],
+    'lib.allThemes': ['All themes', 'Tất cả chủ đề'],
+    'lib.showing': ['{n} quotes', '{n} đoạn'],
+    'lib.showing1': ['1 quote', '1 đoạn'],
+    'lib.noneSaved': ['Nothing saved yet', 'Chưa lưu đoạn nào'],
+    'lib.noneSavedSub': ['When you find a useful passage, hit Save and it shows up here.', 'Gặp đoạn nào hay thì bấm Lưu, nó sẽ nằm ở đây.'],
+    'lib.noMatch': ['No matches', 'Không tìm thấy'],
+    'lib.noMatchSub': ['Try other words, or the names and terms your readings use.', 'Thử từ khác, hoặc dùng tên riêng và thuật ngữ có trong tài liệu.'],
+    'lib.startT': ['Search inside your PDFs', 'Tìm trong file PDF'],
+    'lib.startS': ['Ask a question above or type a few keywords. Matching passages show up here with page numbers.', 'Đặt câu hỏi ở trên hoặc gõ vài từ khoá. Đoạn nào khớp sẽ hiện ở đây kèm số trang.'],
+    'lib.noTextT': ['No readable PDFs yet', 'Chưa có file nào đọc được'],
+    'lib.noTextS': ['Add the PDFs for this assignment. Normal PDFs take a few seconds, scanned ones a bit longer.', 'Thêm file PDF cho bài tập này. File thường đọc vài giây là xong, file scan thì lâu hơn chút.'],
+    'lib.thinking': ['Looking through {n} files…', 'Đang tìm trong {n} file…'],
+    'lib.pdfAnswer': ['From your PDFs', 'Lấy từ file của bạn'],
+    'lib.pdfNote': ['These are exact sentences from your files, ranked on your computer. Nothing is made up, but do read the full quote before citing it.', 'Đây là nguyên văn các câu trong file, được xếp hạng ngay trên máy. Không có câu nào bịa ra, nhưng nhớ đọc cả đoạn trước khi trích nhé.'],
+    'lib.translatedNote': ['Translated on your computer by Chrome.', 'Chrome dịch ngay trên máy.'],
+    'lib.searchedAs': ['Also searched in English: “{q}”', 'Đã tìm thêm bằng tiếng Anh: “{q}”'],
+    'lib.supporting': ['Where it comes from ({n})', 'Lấy từ đâu ({n})'],
+    'lib.dismiss': ['Close answer', 'Đóng câu trả lời'],
+    'lib.pdfAdded': ['Added {n} PDF(s) to {t}', 'Đã thêm {n} file vào {t}'],
+    'lib.skipped': ['Skipped {n} file(s). Only PDFs work here.', 'Bỏ qua {n} file vì không phải PDF.'],
+
+    // Evidence card
+    'ev.save': ['Save', 'Lưu'],
+    'ev.remove': ['Unsave', 'Bỏ lưu'],
+    'ev.savedBadge': ['Saved', 'Đã lưu'],
+    'ev.excerpt': ['From the source', 'Nguyên văn'],
+    'ev.excerptNote': ['kept in the original language', 'giữ nguyên ngôn ngữ gốc'],
+    'ev.viewMap': ['Show on map', 'Xem trên sơ đồ'],
+    'ev.copyRef': ['Copy reference', 'Chép trích dẫn'],
+    'ev.savedToast': ['Saved', 'Đã lưu'],
+    'ev.removedToast': ['Removed from saved', 'Đã bỏ lưu'],
+    'ev.refCopied': ['Copied the {s} reference', 'Đã chép trích dẫn {s}'],
+
+    // Reading PDFs
+    'src.reading': ['Reading… {n}%', 'Đang đọc… {n}%'],
+    'src.ocr': ['Reading scanned pages… {n}%', 'Đang đọc trang scan… {n}%'],
+    'src.noText': ['Couldn’t find any text', 'Không thấy chữ nào'],
+    'src.error': ['Couldn’t open this file', 'Không mở được file này'],
+    'src.missing': ['Please add this file again', 'Bạn thêm lại file này nhé'],
+    'src.passages': ['{n} passages', '{n} đoạn'],
+    'src.done': ['{f} is ready ({n} passages)', 'Đọc xong {f} ({n} đoạn)'],
+    'src.doneOcr': ['{f} is ready, scanned pages included ({n} passages)', 'Đọc xong {f}, kể cả trang scan ({n} đoạn)'],
+    'src.failed': ['Couldn’t read {f}', 'Không đọc được {f}'],
+    'src.ocrLimit': ['Only the first {n} scanned pages were read.', 'Chỉ đọc {n} trang scan đầu tiên.'],
+    'src.edit': ['Edit reference details', 'Sửa thông tin trích dẫn'],
+    'src.addDetails': ['Add author and year', 'Thêm tác giả, năm'],
+    'src.needsDetails': ['no author or year', 'thiếu tác giả, năm'],
+    'src.editTitle': ['Reference details', 'Thông tin trích dẫn'],
+    'src.lookup': ['Look up', 'Tra'],
+    'src.doiHint': ['Paste the DOI and press Look up. The details come from CrossRef.', 'Dán DOI vào rồi bấm Tra, thông tin sẽ lấy từ CrossRef.'],
+    'src.type': ['Type', 'Loại'],
+    'src.tArticle': ['Journal article or conference paper', 'Bài báo hoặc bài hội thảo'],
+    'src.tBook': ['Book', 'Sách'],
+    'src.tReport': ['Report', 'Báo cáo'],
+    'src.year': ['Year', 'Năm'],
+    'src.authors': ['Authors, one per line', 'Tác giả, mỗi dòng một người'],
+    'src.authorsHint': ['Write it as “Family name, Given name”, like “Nguyen, Minh Anh”.', 'Ghi theo kiểu “Họ, Tên”, ví dụ “Nguyen, Minh Anh”.'],
+    'src.org': ['Or an organisation as author', 'Hoặc tên tổ chức (nếu không có tác giả)'],
+    'src.titleF': ['Title', 'Tên bài'],
+    'src.journal': ['Journal or conference', 'Tạp chí hoặc hội thảo'],
+    'src.volume': ['Volume', 'Tập'],
+    'src.issue': ['Issue', 'Số'],
+    'src.pagesF': ['Pages', 'Trang'],
+    'src.publisher': ['Publisher', 'Nhà xuất bản'],
+    'src.place': ['Place', 'Nơi xuất bản'],
+    'src.save': ['Save', 'Lưu'],
+    'src.saved': ['Saved. Citations are updated.', 'Đã lưu, trích dẫn cũng được cập nhật.'],
+    'src.lookupOk': ['Found it on CrossRef', 'Tìm thấy trên CrossRef'],
+    'src.lookupFail': ['CrossRef doesn’t have that DOI. You can fill it in by hand.', 'CrossRef không có DOI này, bạn nhập tay nhé.'],
+    'src.doiFound': ['Found the DOI in {f} and filled in the reference', 'Thấy DOI trong {f}, đã tự điền thông tin trích dẫn'],
+
+    // Answers
+    'ans.pdfIntro': ['{n} passage(s) from {f} file(s) look relevant. The closest sentences:', 'Có {n} đoạn trong {f} file liên quan. Mấy câu sát nhất:'],
+    'ans.noText': ['None of the PDFs in this project can be searched yet. Add one, or wait for it to finish reading.', 'Chưa có file nào trong dự án tìm được. Thêm file hoặc đợi đọc xong rồi hỏi lại nhé.'],
+    'ans.noPassage': ['Nothing in your PDFs matches that. Try other words, or names and terms from the readings.', 'Không thấy đoạn nào khớp. Thử từ khác, hoặc tên riêng và thuật ngữ có trong tài liệu.'],
+    'ans.tipEn': ['Tip: your file seems to be in English, so English keywords will find more.', 'Mẹo: file của bạn hình như là tiếng Anh, hỏi bằng từ khoá tiếng Anh sẽ ra nhiều hơn.'],
+
+    // Map
+    'map.sub': ['Group your saved quotes into themes and show how they relate. Drag things around until it makes sense to you.', 'Gom các đoạn đã lưu thành chủ đề và nối chúng lại. Cứ kéo thả cho tới khi thấy hợp lý.'],
+    'map.emptyT': ['Save a few quotes first', 'Lưu vài đoạn trước đã'],
+    'map.emptyS': ['The map is built from the quotes you save in the Evidence Library.', 'Sơ đồ được tạo từ các đoạn bạn lưu trong Kho trích dẫn.'],
+    'map.addTheme': ['Add theme', 'Thêm chủ đề'],
+    'map.regroup': ['Suggest themes', 'Gợi ý chủ đề'],
+    'map.tidy': ['Tidy up', 'Xếp lại'],
+    'map.theme': ['In theme', 'Thuộc chủ đề'],
+    'map.meta': ['Themes {a} · Quotes {b} · Links {c}', '{a} chủ đề · {b} đoạn · {c} liên kết'],
+    'map.pickTarget': ['Now click the quote you want to connect it to.', 'Giờ bấm vào đoạn bạn muốn nối tới.'],
+    'map.suggested': ['suggested', 'gợi ý'],
+    'map.newLink': ['New link', 'Nối hai đoạn'],
+    'map.linkType': ['How are they related?', 'Hai đoạn này liên quan thế nào?'],
+    'map.linkNote': ['Why? (for your own notes)', 'Vì sao? (ghi chú cho bạn)'],
+    'map.linkNotePh': ['e.g. Same finding, but a different age group', 'VD: Cùng kết quả nhưng khác độ tuổi'],
+    'map.saveLink': ['Save link', 'Lưu'],
+    'map.linkSaved': ['Link saved', 'Đã nối'],
+    'map.overview': ['Overview', 'Tổng quan'],
+    'map.hint': ['Click a theme or a quote to see its details. Drag to move things around.', 'Bấm vào chủ đề hoặc đoạn trích để xem chi tiết. Kéo để di chuyển.'],
+    'map.themes': ['Themes', 'Chủ đề'],
+    'map.evNodes': ['Quotes', 'Đoạn trích'],
+    'map.yourLinks': ['Your links', 'Liên kết'],
+    'map.contras': ['Opposing', 'Trái ngược'],
+    'map.howT': ['How to use it', 'Cách dùng'],
+    'map.how1': ['Themes are suggested from the words your quotes share. Rename them to say what you mean.', 'Chủ đề được gợi ý dựa trên các từ mà các đoạn dùng chung. Đổi tên lại cho đúng ý bạn.'],
+    'map.how2': ['Dotted green lines are suggested similarities. Keep them or dismiss them.', 'Đường chấm xanh là gợi ý "giống nhau". Giữ hay bỏ là tuỳ bạn.'],
+    'map.how3': ['Use "Connect" on a quote to mark where sources differ or disagree. That’s usually the best part of a discussion.', 'Bấm "Nối với đoạn khác" để đánh dấu chỗ các nguồn khác nhau hoặc trái ngược. Mấy chỗ này thường là phần hay nhất để bàn luận.'],
+    'map.tensions': ['Where sources disagree', 'Chỗ các nguồn trái ngược'],
+    'map.kindTheme': ['Theme', 'Chủ đề'],
+    'map.kindEv': ['Quote', 'Đoạn trích'],
+    'map.themeName': ['Name', 'Tên chủ đề'],
+    'map.inTheme': ['Quotes in this theme ({n})', 'Các đoạn trong chủ đề ({n})'],
+    'map.themeEmpty': ['Nothing here yet. Open a quote and pick this theme.', 'Chưa có đoạn nào. Mở một đoạn rồi chọn chủ đề này.'],
+    'map.openLib': ['See in library', 'Xem trong kho'],
+    'map.deleteTheme': ['Delete theme', 'Xoá chủ đề'],
+    'map.deleteThemeConfirm': ['Delete the theme “{t}”? Its quotes stay, they just won’t have a theme.', 'Xoá chủ đề “{t}”? Các đoạn vẫn còn, chỉ là không thuộc chủ đề nào.'],
+    'map.unsorted': ['No theme', 'Chưa có chủ đề'],
+    'map.connect': ['Connect to another quote', 'Nối với đoạn khác'],
+    'map.conns': ['Links ({n})', 'Liên kết ({n})'],
+    'map.noConns': ['Not linked to anything yet.', 'Chưa nối với đoạn nào.'],
+    'map.deleteLink': ['Delete link', 'Xoá liên kết'],
+    'map.sharedTerms': ['Both mention: {w}', 'Cùng nhắc tới: {w}'],
+    'map.keep': ['Keep', 'Giữ'],
+    'map.dismiss': ['Dismiss', 'Bỏ'],
+    'map.closeDetail': ['Close', 'Đóng'],
+    'map.other': ['Other', 'Khác'],
+    'map.themeN': ['Theme {n}', 'Chủ đề {n}'],
+    'map.needTwo': ['Save at least two quotes first.', 'Cần lưu ít nhất 2 đoạn đã.'],
+    'map.regroupConfirm': ['Suggest themes again? Your current themes and positions will be replaced. Your links stay.', 'Gợi ý lại chủ đề? Chủ đề và vị trí hiện tại sẽ bị thay, còn các liên kết thì vẫn giữ.'],
+    'map.grouped': ['Suggested {n} themes. Rename them however you like.', 'Đã gợi ý {n} chủ đề, bạn đổi tên lại cho hợp nhé.'],
+
+    // Builder
+    'b.sub': ['Turn your quotes into an outline. Drag sections to reorder, and drag saved quotes onto a section to back it up.', 'Biến các đoạn trích thành dàn ý. Kéo các ý để đổi thứ tự, kéo đoạn đã lưu vào ý nào thì ý đó có dẫn chứng.'],
+    'b.copy': ['Copy outline', 'Chép dàn ý'],
+    'b.refs': ['References', 'Tài liệu tham khảo'],
+    'b.add': ['Add section', 'Thêm ý'],
+    'b.addLong': ['Add a section', 'Thêm một ý'],
+    'b.thesis': ['Main argument', 'Luận điểm chính'],
+    'b.thesisPh': ['What’s the one thing your essay is arguing?', 'Bài của bạn muốn chứng minh điều gì?'],
+    'b.thesisEmpty': ['Write your main argument here. Your question was: “{q}”', 'Viết luận điểm chính ở đây. Câu hỏi của bạn là: “{q}”'],
+    'b.saveThesis': ['Save', 'Lưu'],
+    'b.thesisSaved': ['Saved', 'Đã lưu'],
+    'b.noSections': ['No sections yet', 'Chưa có ý nào'],
+    'b.noSectionsSub': ['Add your supporting points, a counterargument and your reply to it, then back each one with quotes.', 'Thêm các ý hỗ trợ, một ý phản biện và cách bạn đáp lại, rồi gắn đoạn trích cho từng ý.'],
+    'b.saved': ['Saved quotes', 'Đoạn đã lưu'],
+    'b.check': ['Quick check', 'Kiểm tra nhanh'],
+    'b.ckThesis': ['Main argument written', 'Đã có luận điểm chính'],
+    'b.ckThesisW': ['Write your main argument', 'Chưa viết luận điểm chính'],
+    'b.ckSections': ['{n} sections', '{n} ý'],
+    'b.ckNoEv': ['{n} section(s) with no quotes', '{n} ý chưa có dẫn chứng'],
+    'b.ckAllEv': ['Every section has a quote', 'Ý nào cũng có dẫn chứng'],
+    'b.ckCounter': ['Counterargument included', 'Đã có phản biện'],
+    'b.ckCounterW': ['No counterargument yet', 'Chưa có ý phản biện'],
+    'b.dragHint': ['Drag onto a section', 'Kéo vào một ý'],
+    'b.used': ['used {n}×', 'dùng {n} lần'],
+    'b.trayEmpty': ['Save some quotes in the library and they’ll show up here.', 'Lưu vài đoạn trong kho, chúng sẽ hiện ở đây.'],
+    'b.goLib': ['Go to the library', 'Mở Kho trích dẫn'],
+    'b.section': ['Section {n}', 'Ý {n}'],
+    'b.editing': ['Section {n}, editing', 'Ý {n}, đang sửa'],
+    'b.moveUp': ['Move up', 'Lên'],
+    'b.moveDown': ['Move down', 'Xuống'],
+    'b.editSec': ['Edit', 'Sửa'],
+    'b.delSec': ['Delete', 'Xoá'],
+    'b.linked': ['Quotes ({n})', 'Dẫn chứng ({n})'],
+    'b.notSaved': ['no longer saved', 'đã bỏ lưu'],
+    'b.noEv': ['No quotes yet. A point without evidence is just an opinion.', 'Chưa có dẫn chứng. Ý mà không có dẫn chứng thì chỉ là ý kiến thôi.'],
+    'b.linkSel': ['+ Add a saved quote…', '+ Thêm đoạn đã lưu…'],
+    'b.orDrag': ['or drag one in from the side', 'hoặc kéo từ cột bên cạnh'],
+    'b.unlink': ['Remove quote', 'Gỡ đoạn này'],
+    'b.type': ['Kind of section', 'Loại ý'],
+    'b.claim': ['Point', 'Ý chính'],
+    'b.claimPh': ['What does this section argue?', 'Ý này muốn nói gì?'],
+    'b.reason': ['Explanation', 'Giải thích'],
+    'b.reasonPh': ['How do your quotes support it?', 'Các đoạn trích chứng minh ý này thế nào?'],
+    'b.saveSec': ['Save', 'Lưu'],
+    'b.added': ['Section added', 'Đã thêm ý'],
+    'b.updated': ['Section saved', 'Đã lưu ý'],
+    'b.deleted': ['Section deleted', 'Đã xoá ý'],
+    'b.confirmDel': ['Delete “{t}”?', 'Xoá ý “{t}”?'],
+    'b.untitled': ['Untitled', 'Chưa có tên'],
+    'b.linkedToast': ['Quote added', 'Đã gắn đoạn trích'],
+    'b.already': ['That quote is already in this section', 'Đoạn này có trong ý này rồi'],
+    'b.reordered': ['Order saved', 'Đã đổi thứ tự'],
+    'b.copied': ['Outline copied, with {s} references', 'Đã chép dàn ý kèm trích dẫn {s}'],
+    'b.copyFail': ['Couldn’t copy', 'Không chép được'],
+    'b.exportQ': ['Research question', 'Câu hỏi nghiên cứu'],
+    'b.exportThesis': ['MAIN ARGUMENT', 'LUẬN ĐIỂM CHÍNH'],
+    'b.exportRefs': ['REFERENCES', 'TÀI LIỆU THAM KHẢO'],
+
+    // Section and link types
+    'type.supporting': ['Supporting point', 'Ý hỗ trợ'],
+    'type.counter': ['Counterargument', 'Phản biện'],
+    'type.rebuttal': ['Response', 'Đáp lại'],
+    'conn.similar': ['Similar', 'Giống nhau'],
+    'conn.different': ['Different', 'Khác nhau'],
+    'conn.contradicts': ['Opposing', 'Trái ngược'],
+
+    // References
+    'ref.title': ['Reference list', 'Danh mục tham khảo'],
+    'ref.sub': ['{p}, in {s}', '{p}, theo kiểu {s}'],
+    'ref.style': ['Style', 'Kiểu trích dẫn'],
+    'ref.inText': ['In-text', 'Trong bài'],
+    'ref.copyAll': ['Copy list', 'Chép danh mục'],
+    'ref.copied': ['Reference list copied', 'Đã chép danh mục'],
+    'ref.incomplete': ['Missing the author or year.', 'Thiếu tác giả hoặc năm.'],
+    'ref.disclaimer': ['Formatted the way RMIT Library describes each style. It’s still worth checking against <a href="https://www.lib.rmit.edu.au/easy-cite/" target="_blank" rel="noopener">RMIT Easy Cite</a> before you submit.', 'Định dạng theo hướng dẫn của Thư viện RMIT. Trước khi nộp bạn vẫn nên so lại với <a href="https://www.lib.rmit.edu.au/easy-cite/" target="_blank" rel="noopener">RMIT Easy Cite</a> cho chắc.'],
+    'ref.empty': ['No PDFs yet, so no references either.', 'Chưa có file PDF nên chưa có tài liệu tham khảo.'],
+    'ref.harvardNote': ['', ''],
+    'ref.apaNote': ['', ''],
+    'ref.ieeeNote': ['', ''],
+    'ref.chicagoNote': ['', ''],
+    'ref.vancouverNote': ['', ''],
+    'ref.aglcNote': ['', ''],
+
+    // Settings
+    'set.sub': ['Your name, language and reference style.', 'Tên, ngôn ngữ và kiểu trích dẫn của bạn.'],
+    'set.profile': ['Profile', 'Hồ sơ'],
+    'set.name': ['Name', 'Tên'],
+    'set.uni': ['University or campus', 'Trường / cơ sở'],
+    'set.program': ['Program', 'Ngành học'],
+    'set.prefs': ['Preferences', 'Tuỳ chỉnh'],
+    'set.lang': ['Language', 'Ngôn ngữ'],
+    'set.langNote': ['Quotes always stay in the language of the original file.', 'Đoạn trích luôn giữ nguyên ngôn ngữ của file gốc.'],
+    'set.cite': ['Reference style', 'Kiểu trích dẫn'],
+    'set.save': ['Save', 'Lưu'],
+    'set.saved': ['Saved', 'Đã lưu'],
+    'set.help': ['Help', 'Trợ giúp'],
+    'set.helpSub': ['Forgot how something works?', 'Quên cách dùng?'],
+    'set.replay': ['Show the walkthrough again', 'Xem lại hướng dẫn'],
+    'set.viewIntro': ['Intro page', 'Trang giới thiệu'],
+    'set.data': ['Your data', 'Dữ liệu'],
+    'set.dataSub': ['Everything is stored in this browser only. Deleting it can’t be undone.', 'Mọi thứ chỉ lưu trong trình duyệt này. Xoá rồi là không lấy lại được.'],
+    'set.reset': ['Delete everything', 'Xoá hết dữ liệu'],
+    'set.resetConfirm': ['Delete all projects, PDFs, quotes, maps and outlines? This can’t be undone.', 'Xoá hết dự án, file, đoạn trích, sơ đồ và dàn ý? Không lấy lại được đâu.'],
+    'set.resetDone': ['All data deleted', 'Đã xoá hết'],
+    'set.about': ['About', 'Về Trace & Think'],
+    'set.about1': ['PDFs are read in your browser with PDF.js (and Tesseract for scanned pages), searched with MiniSearch, and grouped into themes with a bit of text analysis. Nothing is sent to a server, apart from DOI lookups to CrossRef.', 'File PDF được đọc ngay trên trình duyệt bằng PDF.js (trang scan thì dùng Tesseract), tìm kiếm bằng MiniSearch, và gom chủ đề bằng phân tích văn bản đơn giản. Không có gì gửi lên máy chủ, trừ việc tra DOI trên CrossRef.'],
+    'set.about2': ['A student project for RMIT. Not affiliated with RMIT University.', 'Dự án sinh viên làm cho môn học ở RMIT, không phải sản phẩm chính thức của trường.'],
+
+    // New project modal
+    'modal.title': ['New project', 'Tạo dự án'],
+    'modal.sub': ['One project per assignment works best.', 'Mỗi bài tập nên là một dự án riêng.'],
+    'modal.ptitle': ['Project name', 'Tên dự án'],
+    'modal.ptitlePh': ['e.g. Wayang kulit and Indonesian visual culture', 'VD: Wayang kulit và văn hoá thị giác Indonesia'],
+    'modal.titleError': ['Give it a name first.', 'Đặt tên cho dự án đã nhé.'],
+    'modal.question': ['Research question', 'Câu hỏi nghiên cứu'],
+    'modal.questionPh': ['What are you trying to find out?', 'Bạn muốn tìm hiểu điều gì?'],
+    'modal.questionHint': ['The more specific, the easier it is to find good quotes.', 'Câu hỏi càng cụ thể thì càng dễ tìm được đoạn hay.'],
+    'modal.course': ['Course code', 'Mã môn'],
+    'modal.due': ['Due date', 'Hạn nộp'],
+    'modal.desc': ['Notes', 'Ghi chú'],
+    'modal.descPh': ['Anything you want to remember about this assignment', 'Mấy điều cần nhớ về bài tập này'],
+    'modal.sources': ['PDFs', 'File PDF'],
+    'modal.drop': ['Drop PDFs here or browse', 'Kéo file PDF vào đây hoặc chọn file'],
+    'modal.dropHint': ['Read on your computer, never uploaded anywhere', 'Đọc ngay trên máy, không tải lên đâu cả'],
+    'modal.create': ['Create', 'Tạo'],
+    'modal.created': ['Created “{t}”', 'Đã tạo “{t}”'],
+    'modal.remove': ['Remove {t}', 'Bỏ {t}'],
+
+    // Activity
+    'act.asked': ['Asked “{q}”', 'Đã hỏi “{q}”'],
+    'act.saved': ['Saved “{t}”', 'Đã lưu “{t}”'],
+    'act.removed': ['Unsaved “{t}”', 'Đã bỏ lưu “{t}”'],
+    'act.uploaded': ['Added {f}', 'Đã thêm {f}'],
+    'act.uploadedN': ['Added {n} PDFs', 'Đã thêm {n} file'],
+    'act.created': ['Created “{t}”', 'Đã tạo “{t}”'],
+    'act.addedSec': ['Added the section “{t}”', 'Đã thêm ý “{t}”'],
+    'act.editedSec': ['Edited “{t}”', 'Đã sửa ý “{t}”'],
+    'act.deletedSec': ['Deleted “{t}”', 'Đã xoá ý “{t}”'],
+    'act.linked': ['Added a quote to “{a}”', 'Đã gắn đoạn trích vào ý “{a}”'],
+    'act.thesis': ['Updated the main argument', 'Đã sửa luận điểm chính'],
+    'act.grouped': ['Grouped quotes into {n} themes', 'Đã gom các đoạn thành {n} chủ đề'],
+    'act.mapLink': ['Linked two quotes ({t})', 'Đã nối hai đoạn ({t})'],
+
+    // Tour
+    'tour.next': ['Next', 'Tiếp'],
+    'tour.back': ['Back', 'Quay lại'],
+    'tour.skip': ['Skip', 'Bỏ qua'],
+    'tour.finish': ['Got it', 'Hiểu rồi'],
+    'tour.start': ['Show me', 'Xem nào'],
+    'tour.count': ['{i} of {n}', '{i}/{n}'],
+    'tour.done': ['That’s it. You can see this again with the ? button.', 'Xong rồi. Muốn xem lại thì bấm nút ? nhé.'],
+    'tour.0.t': ['Hi, welcome to Trace & Think', 'Chào bạn, đây là Trace & Think'],
+    'tour.0.b': ['Want a quick look around? It takes about a minute. You can also skip it and figure things out yourself.', 'Xem qua một vòng nhé? Tầm 1 phút thôi. Hoặc bỏ qua rồi tự mò cũng được.'],
+    'tour.1.t': ['The steps, in order', 'Các bước theo thứ tự'],
+    'tour.1.b': ['The menu follows how you’d normally research: collect quotes, sort out the ideas, then write the outline.', 'Menu đi đúng theo thứ tự làm bài: lấy đoạn trích, sắp xếp ý, rồi viết dàn ý.'],
+    'tour.2.t': ['Start with a project', 'Bắt đầu bằng một dự án'],
+    'tour.2.b': ['Make one per assignment. Add your research question and the PDFs you’re reading.', 'Mỗi bài tập một dự án. Ghi câu hỏi nghiên cứu và thêm các file PDF bạn đang đọc.'],
+    'tour.3.t': ['Where you’re up to', 'Bạn đang ở bước nào'],
+    'tour.3.b': ['These four steps show how far along the project is. Click one to jump there.', 'Bốn bước này cho biết dự án tới đâu rồi. Bấm vào bước nào là nhảy tới bước đó.'],
+    'tour.4.t': ['Ask your PDFs', 'Hỏi tài liệu'],
+    'tour.4.b': ['Type a question and you’ll get the sentences from your files that answer it, with page numbers. English keywords work best for English readings.', 'Gõ câu hỏi, web sẽ lấy những câu trong file trả lời được, kèm số trang. Tài liệu tiếng Anh thì hỏi bằng từ khoá tiếng Anh sẽ chuẩn hơn.'],
+    'tour.5.t': ['Every quote shows where it’s from', 'Đoạn nào cũng ghi rõ nguồn'],
+    'tour.5.b': ['You see the exact wording, the file, the page and a ready-made in-text citation. Save the ones you want to use.', 'Bạn thấy nguyên văn, tên file, số trang và trích dẫn trong bài làm sẵn. Đoạn nào cần thì bấm Lưu.'],
+    'tour.6.t': ['Sort out your ideas', 'Sắp xếp ý'],
+    'tour.6.b': ['Saved quotes get grouped into themes. Rename them, drag them around, and mark where sources agree or disagree.', 'Các đoạn đã lưu được gom theo chủ đề. Bạn đổi tên, kéo thả, và đánh dấu chỗ các nguồn giống hay trái ngược nhau.'],
+    'tour.7.t': ['Build the outline', 'Viết dàn ý'],
+    'tour.7.b': ['Write your main argument, add sections and drag quotes onto them. When you’re ready, copy the whole thing with references.', 'Viết luận điểm chính, thêm các ý rồi kéo đoạn trích vào. Xong thì chép cả dàn ý kèm tài liệu tham khảo.'],
+    'tour.8.t': ['Language and references', 'Ngôn ngữ và trích dẫn'],
+    'tour.8.b': ['Switch between English and Vietnamese here. Pick RMIT Harvard, APA or another style in Settings.', 'Đổi tiếng Anh, tiếng Việt ở đây. Chọn RMIT Harvard, APA hay kiểu khác trong Cài đặt.'],
+
+    // Landing
+    'l.features': ['Features', 'Tính năng'],
+    'l.how': ['How it works', 'Cách dùng'],
+    'l.rmit': ['For RMIT students', 'Cho sinh viên RMIT'],
+    'l.open': ['Open the app', 'Vào web'],
+    'l.eyebrow': ['A research workspace for RMIT students', 'Chỗ làm nghiên cứu cho sinh viên RMIT'],
+    'l.h1a': ['Research with clarity.', 'Nghiên cứu cho rõ ràng.'],
+    'l.h1b': ['Think with evidence.', 'Nghĩ bằng dẫn chứng.'],
+    'l.lead': ['Drop in the PDFs for your assignment, ask them questions, keep the quotes that matter and turn them into an outline. Every quote stays linked to its file and page, so citing is the easy part.', 'Thả file PDF của bài tập vào, đặt câu hỏi, giữ lại những đoạn quan trọng rồi biến chúng thành dàn ý. Đoạn nào cũng gắn với file và số trang, nên lúc trích dẫn nhẹ đầu hơn nhiều.'],
+    'l.cta': ['Get started', 'Bắt đầu'],
+    'l.cta2': ['How it works', 'Xem cách dùng'],
+    'l.ctaNote': ['Free, no sign-up. Your files stay on your computer.', 'Miễn phí, không cần đăng ký. File nằm yên trên máy bạn.'],
+    'l.probT': ['Reading isn’t the hard part', 'Đọc thì không khó'],
+    'l.probS': ['The hard part is keeping track of what you read and turning it into an argument.', 'Khó là nhớ được mình đã đọc gì ở đâu, rồi biến nó thành một bài có lập luận.'],
+    'l.p1t': ['PDFs everywhere', 'File nằm khắp nơi'],
+    'l.p1b': ['Ten tabs, three folders and a notes app. Finding that one quote again takes forever.', 'Mười tab, ba thư mục, thêm cái app ghi chú. Tìm lại đúng một câu mà mất cả buổi.'],
+    'l.p2t': ['Summaries without page numbers', 'Tóm tắt mà không có số trang'],
+    'l.p2b': ['A summary is quick, but you still have to go back and find what the author actually wrote.', 'Tóm tắt thì nhanh, nhưng rồi vẫn phải lật lại xem tác giả viết nguyên văn thế nào.'],
+    'l.p3t': ['Notes that never become an essay', 'Ghi chú mãi không thành bài'],
+    'l.p3b': ['You have plenty of notes but no clear line from them to your argument.', 'Ghi chú thì nhiều, mà nối chúng thành lập luận thì không biết bắt đầu từ đâu.'],
+    'l.howT': ['Four steps, same every time', 'Bốn bước, lần nào cũng vậy'],
+    'l.howS': ['The app walks you through them in order.', 'Web dẫn bạn đi lần lượt từng bước.'],
+    'l.h1t': ['Make a project and add PDFs', 'Tạo dự án, thêm PDF'],
+    'l.h1d': ['Write your research question and drop in your readings. Scanned PDFs work too.', 'Ghi câu hỏi nghiên cứu và thả tài liệu vào. File scan cũng được.'],
+    'l.h2t': ['Ask and save quotes', 'Hỏi và lưu đoạn trích'],
+    'l.h2d': ['Ask a question and get the sentences that answer it, with page numbers.', 'Đặt câu hỏi, nhận lại đúng những câu trả lời được, kèm số trang.'],
+    'l.h3t': ['Sort out the ideas', 'Sắp xếp ý'],
+    'l.h3d': ['Group quotes into themes and mark where sources agree or disagree.', 'Gom đoạn trích thành chủ đề, đánh dấu chỗ các nguồn giống hoặc trái ngược nhau.'],
+    'l.h4t': ['Write the outline', 'Viết dàn ý'],
+    'l.h4d': ['Put your points in order, back each one with quotes, and copy it out with references.', 'Xếp các ý theo thứ tự, gắn dẫn chứng cho từng ý rồi chép ra kèm tài liệu tham khảo.'],
+    'l.featT': ['What you can do with it', 'Làm được gì'],
+    'l.f1t': ['Real answers from your files', 'Trả lời từ chính tài liệu'],
+    'l.f1d': ['Answers are the actual sentences from your PDFs. Nothing is made up.', 'Câu trả lời là nguyên văn trong file PDF của bạn, không có câu nào bịa.'],
+    'l.f2t': ['Reads scanned pages', 'Đọc được trang scan'],
+    'l.f2d': ['Pages that are just images are read with OCR, in English or Vietnamese.', 'Trang chỉ là ảnh cũng đọc được nhờ OCR, cả tiếng Anh lẫn tiếng Việt.'],
+    'l.f3t': ['Insight Map', 'Sơ đồ ý'],
+    'l.f3d': ['See your quotes grouped by theme and how they connect.', 'Thấy các đoạn trích được gom theo chủ đề và nối với nhau ra sao.'],
+    'l.f4t': ['Argument Builder', 'Dàn ý'],
+    'l.f4d': ['A drag and drop outline: main argument, points, counterargument and response.', 'Dàn ý kéo thả: luận điểm chính, các ý, phản biện và phần đáp lại.'],
+    'l.f5t': ['RMIT reference styles', 'Trích dẫn kiểu RMIT'],
+    'l.f5d': ['RMIT Harvard, APA 7th, IEEE, Chicago, Vancouver and AGLC4. DOIs are looked up for you.', 'RMIT Harvard, APA 7th, IEEE, Chicago, Vancouver và AGLC4. Có DOI là web tự tra thông tin.'],
+    'l.f6t': ['English or Vietnamese', 'Tiếng Anh hoặc tiếng Việt'],
+    'l.f6d': ['Use the app in either language. Quotes stay in the original.', 'Dùng bằng ngôn ngữ nào cũng được. Đoạn trích thì giữ nguyên bản.'],
+    'l.rmitT': ['Made with RMIT assignments in mind', 'Làm ra cho bài tập ở RMIT'],
+    'l.rmitS': ['Saigon South, Hanoi or Melbourne, the referencing rules are the same. So is the struggle.', 'Học ở Nam Sài Gòn, Hà Nội hay Melbourne thì quy tắc trích dẫn cũng như nhau. Cái khổ cũng như nhau.'],
+    'l.r1': ['RMIT Harvard by default, plus the other Easy Cite styles', 'Mặc định RMIT Harvard, có thêm các kiểu khác trong Easy Cite'],
+    'l.r2': ['In-text citations with page numbers, ready to paste', 'Trích dẫn trong bài có sẵn số trang, chỉ việc dán'],
+    'l.r3': ['Good for essays, literature reviews and capstone projects', 'Dùng được cho essay, literature review và capstone'],
+    'l.r4': ['English and Vietnamese, for RMIT Vietnam', 'Có tiếng Việt cho sinh viên RMIT Việt Nam'],
+    'l.sampleRef': ['One source, three styles', 'Một tài liệu, ba kiểu trích dẫn'],
+    'l.finalT': ['Got an assignment due?', 'Sắp tới hạn nộp bài?'],
+    'l.finalS': ['Make a project, add your PDFs and ask your first question.', 'Tạo dự án, thêm file PDF và hỏi câu đầu tiên thôi.'],
+    'l.footer': ['A student project, not affiliated with RMIT University. The example above is made up.', 'Dự án của sinh viên, không phải sản phẩm của Đại học RMIT. Ví dụ ở trên là tự đặt ra.'],
+    'l.mockQ': ['Does phone use at night affect sleep?', 'Dùng điện thoại ban đêm có ảnh hưởng giấc ngủ không?'],
+    'l.mockTheme': ['Sleep', 'Giấc ngủ'],
+    'l.mockTitle': ['Phone use after lights-out shortens sleep', 'Dùng điện thoại sau khi tắt đèn làm ngủ ít đi'],
+    'l.mockNote': ['Example only', 'Chỉ là ví dụ']
   };
-
-  const DEMO_SOURCES = [
-    { id: 's1', file: 'Hartley_Chen_2022_Screen_Time_Wellbeing.pdf', title: 'Screen Time and Adolescent Wellbeing: A Three-Wave Cohort Study', short: 'Hartley & Chen, 2022', pages: 24, size: '2.4 MB' },
-    { id: 's2', file: 'Okafor_2021_Social_Comparison_Online.pdf', title: 'Upward Social Comparison on Image-Based Platforms', short: 'Okafor et al., 2021', pages: 18, size: '1.1 MB' },
-    { id: 's3', file: 'Lindqvist_2023_Night_Use_Sleep_Mood.pdf', title: 'Night-time Smartphone Use, Sleep Quality and Mood in Teenagers', short: 'Lindqvist et al., 2023', pages: 31, size: '3.0 MB' },
-    { id: 's4', file: 'Ramos_Patel_2020_Online_Peer_Support.pdf', title: 'Online Peer Support Among Rural and LGBTQ+ Youth', short: 'Ramos & Patel, 2020', pages: 22, size: '1.6 MB' },
-    { id: 's5', file: 'Youth_Digital_Habits_Survey_2023.pdf', title: 'National Youth Digital Habits Survey 2023 — Technical Report', short: 'Youth Research Council, 2023', pages: 56, size: '5.8 MB' }
-  ];
-
-  const EVIDENCE = [
-    {
-      id: 'e1', projectId: DEMO_PROJECT, sourceId: 's1', page: 9, themes: ['usage'],
-      title: 'Total screen time has a very small link to wellbeing',
-      extracted: 'Across roughly 11,000 adolescents, total daily screen time was negatively associated with wellbeing, but the effect was tiny — it explained less than 1% of the differences between participants.',
-      excerpt: 'The association between total daily screen time and self-reported wellbeing was negative but small (β = −0.04), accounting for less than 1% of the variance observed across the 11,284 participants.'
-    },
-    {
-      id: 'e2', projectId: DEMO_PROJECT, sourceId: 's5', page: 23, themes: ['usage'],
-      title: 'Heavy use (5+ hours a day) linked to depressive symptoms',
-      extracted: 'Teenagers reporting five or more hours of social media a day were about twice as likely to report elevated depressive symptoms as light users. This is a cross-sectional association, so it does not show cause.',
-      excerpt: 'Respondents reporting five or more hours of daily social media use showed a 2.1-fold higher likelihood of elevated depressive symptoms compared with those reporting under one hour (adjusted OR = 2.1, 95% CI 1.7–2.6).'
-    },
-    {
-      id: 'e3', projectId: DEMO_PROJECT, sourceId: 's1', page: 14, themes: ['usage', 'comparison'],
-      title: 'Passive scrolling predicts mood decline more than active use',
-      extracted: 'The type of use mattered more than the amount: passive browsing of feeds predicted lower mood a year later, while active messaging with close friends did not.',
-      excerpt: 'Passive consumption of feed content predicted declines in positive affect at the 12-month follow-up (b = −0.11, p = .003), whereas active, directed communication with close friends showed no significant association.'
-    },
-    {
-      id: 'e4', projectId: DEMO_PROJECT, sourceId: 's2', page: 7, themes: ['comparison'],
-      title: 'Upward comparison explains the link to lower self-esteem',
-      extracted: 'Comparing oneself to people who seem better-off (upward comparison) accounted for the relationship between time on image-based platforms and lower self-esteem.',
-      excerpt: 'Upward social comparison fully mediated the relationship between time spent on image-based platforms and state self-esteem (indirect effect = −0.18, 95% CI [−0.26, −0.10]).'
-    },
-    {
-      id: 'e5', projectId: DEMO_PROJECT, sourceId: 's2', page: 11, themes: ['comparison'],
-      title: 'Appearance comparison effects are stronger for girls',
-      extracted: 'The negative effect of appearance-focused comparison on body image was roughly twice as strong for girls as for boys, suggesting gender shapes who is most affected.',
-      excerpt: 'The moderating effect of gender was significant: the association between appearance-based comparison and body dissatisfaction was approximately twice as large among female participants (β = −0.31) as among male participants (β = −0.14).'
-    },
-    {
-      id: 'e6', projectId: DEMO_PROJECT, sourceId: 's3', page: 5, themes: ['sleep'],
-      title: 'Phone use after lights-out shortens sleep',
-      extracted: 'Teenagers who used their phones after going to bed on most nights slept about 40 minutes less on school nights and reported worse sleep quality.',
-      excerpt: 'Participants who used a smartphone after lights-out on four or more nights per week slept on average 41 minutes less on school nights and reported significantly poorer subjective sleep quality.'
-    },
-    {
-      id: 'e7', projectId: DEMO_PROJECT, sourceId: 's3', page: 19, themes: ['sleep'],
-      title: 'Sleep quality is a key pathway to low mood',
-      extracted: 'Poor sleep explained around 40% of the link between night-time phone use and low mood, suggesting that protecting sleep could reduce much of the harm.',
-      excerpt: 'Sleep quality mediated approximately 40% of the total association between night-time smartphone use and depressed mood, indicating that disrupted sleep is a substantial, though partial, pathway.'
-    },
-    {
-      id: 'e8', projectId: DEMO_PROJECT, sourceId: 's4', page: 8, themes: ['support'],
-      title: 'Online communities support marginalised youth',
-      extracted: 'For LGBTQ+ adolescents, online peer communities were a major source of emotional support, especially where offline acceptance was limited.',
-      excerpt: 'Seventy-two percent of LGBTQ+ participants identified online communities as their primary source of emotional support, citing acceptance that was frequently unavailable in their offline environments.'
-    },
-    {
-      id: 'e9', projectId: DEMO_PROJECT, sourceId: 's4', page: 15, themes: ['support'],
-      title: 'Social media reduces isolation for rural teens',
-      extracted: 'Rural adolescents who used social media to keep in touch with friends reported lower loneliness than those who rarely did.',
-      excerpt: 'Among rural respondents, frequent use of social platforms to maintain friendships was associated with significantly lower loneliness scores (d = 0.38) relative to infrequent users.'
-    },
-    {
-      id: 'e10', projectId: DEMO_PROJECT, sourceId: 's5', page: 31, themes: ['support'],
-      title: 'Most teens say social media helps them feel connected',
-      extracted: 'About two-thirds of surveyed teens said social media helps them feel more connected to friends — a perceived benefit that sits alongside reported harms.',
-      excerpt: '68% of respondents agreed that social media helps them feel more connected to what is going on in their friends’ lives, while 23% reported feeling overwhelmed by drama on these platforms.'
-    },
-    {
-      id: 'e11', projectId: DEMO_PROJECT, sourceId: 's1', page: 17, themes: ['usage'],
-      title: 'No lasting effect once earlier wellbeing is controlled',
-      extracted: 'When the researchers accounted for how teenagers were feeling at the start, social media time no longer predicted later wellbeing — challenging simple "more use causes harm" claims.',
-      excerpt: 'After adjusting for baseline wellbeing, social media use at Wave 1 did not significantly predict wellbeing at Wave 3 (β = −0.02, p = .41), suggesting that cross-sectional associations may partly reflect reverse causation.'
-    }
-  ];
-
-  /* Relationships between evidence (simulated AI analysis) */
-  const CONNECTIONS = [
-    { a: 'e1', b: 'e11', type: 'similar', note: 'Both find that the overall amount of use has little direct effect on wellbeing.' },
-    { a: 'e2', b: 'e11', type: 'contradicts', note: 'Survey data links heavy use to depression, but longitudinal data shows no lasting effect once baseline wellbeing is controlled.' },
-    { a: 'e1', b: 'e2', type: 'different', note: 'Heavy users show far stronger associations than the average-use effect — this may indicate a threshold rather than a linear effect.' },
-    { a: 'e3', b: 'e4', type: 'similar', note: 'Both point to how platforms are used: passive viewing creates more opportunities for upward comparison.' },
-    { a: 'e4', b: 'e5', type: 'different', note: 'The comparison effect is not uniform — it is substantially stronger for girls than for boys.' },
-    { a: 'e6', b: 'e7', type: 'similar', note: 'Same study: night-time use disrupts sleep, which in turn explains part of the effect on mood.' },
-    { a: 'e8', b: 'e9', type: 'similar', note: 'Both show social media reducing isolation for groups with limited offline support.' },
-    { a: 'e2', b: 'e10', type: 'different', note: 'The same survey reports both perceived connection benefits and an association with depressive symptoms.' },
-    { a: 'e4', b: 'e9', type: 'different', note: 'Contact with friends reduces loneliness, while exposure to idealised peers lowers self-esteem — the same platforms may help or harm depending on use.' },
-    { a: 'e7', b: 'e11', type: 'contradicts', note: 'Sleep mediation implies a real harm pathway, while the cohort data finds no lasting effect of overall use. Timing of use (night) may matter more than amount.' }
-  ];
-
-  /* Fixed positions for the Insight Map, in a 1000 × 660 coordinate space */
-  const MAP_LAYOUT = {
-    't:usage': [300, 220], 't:comparison': [700, 220], 't:sleep': [300, 470], 't:support': [700, 470],
-    'e:e1': [100, 80], 'e:e11': [300, 80], 'e:e3': [500, 80], 'e:e4': [700, 80],
-    'e:e2': [100, 280], 'e:e5': [900, 220],
-    'e:e6': [100, 470], 'e:e8': [900, 470],
-    'e:e7': [300, 600], 'e:e10': [500, 600], 'e:e9': [700, 600]
-  };
-
-  const CONN_LABELS = {
-    similar: { label: 'Similarity', icon: 'equal' },
-    different: { label: 'Difference', icon: 'git-compare' },
-    contradicts: { label: 'Contradiction', icon: 'zap' }
-  };
-
-  const SECTION_TYPES = {
-    supporting: 'Supporting argument',
-    counter: 'Counterargument',
-    rebuttal: 'Rebuttal'
-  };
-
-  /* Simulated AI answers for the question box */
-  const MOCK_ANSWERS = [
-    {
-      match: /sleep|night|bed|tired|late/i,
-      text: 'Night-time phone use appears to affect mood mainly <em>indirectly</em>. Teenagers who used their phones after lights-out slept around 40 minutes less on school nights {e6}, and sleep quality accounted for roughly 40% of the link between night-time use and low mood {e7}. However, a cohort study found no lasting effect of overall use once earlier wellbeing was controlled {e11}, which suggests <strong>when</strong> teens use social media may matter more than how much.',
-      evidence: ['e6', 'e7', 'e11']
-    },
-    {
-      match: /compar|instagram|image|appearance|body|girl|gender|self-esteem|esteem/i,
-      text: 'Your sources suggest that upward social comparison is a central mechanism. Comparison with seemingly better-off peers fully explained the link between image-based platform use and lower self-esteem {e4}. This effect was about twice as strong for girls {e5}, and it is more likely during passive scrolling than during active messaging {e3}.',
-      evidence: ['e4', 'e5', 'e3']
-    },
-    {
-      match: /support|connect|benefit|positive|lonel|isolat|communit|help|lgbt|rural/i,
-      text: 'Several sources describe genuine benefits. LGBTQ+ adolescents frequently named online communities as their main source of emotional support {e8}, rural teens who kept in touch online reported lower loneliness {e9}, and about two-thirds of surveyed teens said social media helps them feel connected {e10}. These findings are a useful counterweight to harm-focused studies.',
-      evidence: ['e8', 'e9', 'e10']
-    },
-    {
-      match: /time|hour|how much|amount|heavy|screen|depress|harm|mental health|wellbeing|well-being/i,
-      text: 'The evidence on <em>amount</em> of use is mixed. Across a large cohort, total screen time explained less than 1% of variation in wellbeing {e1}, and the effect disappeared once baseline wellbeing was controlled {e11}. In contrast, a national survey found that teens using social media for 5+ hours a day were about twice as likely to report depressive symptoms {e2}. One way to reconcile these: harms may concentrate among very heavy users, or reflect reverse causation.',
-      evidence: ['e1', 'e11', 'e2']
-    }
-  ];
-
-  const SUGGESTED_QUESTIONS = [
-    'How does night-time phone use affect mood?',
-    'Is social comparison a key mechanism?',
-    'Does social media have any benefits?',
-    'Does more screen time cause harm?'
-  ];
 
   /* ------------------------------------------------------
-     2. STATE + PERSISTENCE
+     2. EXAMPLE DATA
+     Only used to illustrate the landing page and the citation preview in Settings.
+     The source below is made up for the illustration; students only ever see their own PDFs in the app.
      ------------------------------------------------------ */
+  const EXAMPLE_SOURCE = {
+    id: 'example', file: 'Hartley_Chen_2022_Screen_Time.pdf', type: 'article', year: 2022,
+    authors: [{ family: 'Hartley', given: 'James' }, { family: 'Chen', given: 'Lin' }],
+    title: 'Screen time and adolescent wellbeing: a three-wave cohort study', journal: 'Journal of Adolescent Health Research',
+    jAbbr: 'J Adolesc Health Res', volume: 14, issue: 2, range: '112–135'
+  };
+  const EXAMPLE_EXCERPT = 'Participants who used a smartphone after lights-out on four or more nights per week slept on average 41 minutes less on school nights and reported significantly poorer subjective sleep quality.';
+  const CONN_ICONS = { similar: 'equal', different: 'git-compare', contradicts: 'zap' };
+
+  /* ------------------------------------------------------
+     3. REFERENCING
+     ------------------------------------------------------ */
+  const CITATION_STYLES = {
+    'rmit-harvard': { label: 'RMIT Harvard', note: 'ref.harvardNote' },
+    'apa7': { label: 'APA 7th', note: 'ref.apaNote' },
+    'ieee': { label: 'IEEE', note: 'ref.ieeeNote' },
+    'chicago': { label: 'Chicago B', note: 'ref.chicagoNote' },
+    'vancouver': { label: 'Vancouver', note: 'ref.vancouverNote' },
+    'aglc4': { label: 'AGLC4', note: 'ref.aglcNote' }
+  };
+  const NUMERIC_STYLES = ['ieee', 'vancouver'];
+
+  const initials = (given, dots) => (given || '').split(/[\s-]+/).filter(Boolean).map(p => p[0].toUpperCase() + (dots ? '.' : '')).join(dots ? ' ' : '');
+  function joinNames(list, sep, last) {
+    if (list.length <= 1) return list.join('');
+    return list.slice(0, -1).join(sep) + last + list[list.length - 1];
+  }
+  function hasMeta(src) { return !!(src.org || (src.authors && src.authors.length)); }
+  /* A source is "complete" when it has a creator and a year, otherwise the student is prompted to add details */
+  const isComplete = (src) => hasMeta(src) && !!src.year;
+  const shortTitle = (title) => {
+    const words = (title || '').split(/\s+/);
+    return words.length > 6 ? words.slice(0, 6).join(' ') + '…' : title;
+  };
+
+  /* Author part of an in-text citation. With no author, author-date styles use the (short) title instead. */
+  function citeWho(src, style, html) {
+    if (src.org) return html ? esc(src.org) : src.org;
+    const a = src.authors || [];
+    if (!a.length) {
+      const st = shortTitle(src.title);
+      return html ? `<i>${esc(st)}</i>` : st;
+    }
+    const and = style === 'apa7' ? '&' : 'and';
+    let who;
+    if (a.length === 1) who = a[0].family;
+    else if (a.length === 2) who = `${a[0].family} ${and} ${a[1].family}`;
+    else who = `${a[0].family} et al.`;
+    return html ? esc(who) : who;
+  }
+
+  /** In-text citation, e.g. RMIT Harvard → (Hartley and Chen 2022:9). Pass html=true to get italics for titles. */
+  function inText(src, page, style = state.user.citation, n = 1, html = false) {
+    const year = src.year || 'n.d.';
+    const who = citeWho(src, style, html);
+    switch (style) {
+      case 'apa7': return `(${who}, ${year}${page ? `, p. ${page}` : ''})`;
+      case 'chicago': return `(${who} ${year}${page ? `, ${page}` : ''})`;
+      case 'ieee': return `[${n}${page ? `, p. ${page}` : ''}]`;
+      case 'vancouver': return `(${n}${page ? `, p. ${page}` : ''})`;
+      case 'aglc4': return `${String(who).replace(' et al.', ' et al')} (n ${n})${page ? ` ${page}` : ''}`; // subsequent footnote form
+      default: return `(${who} ${year}${page ? `:${page}` : ''})`;
+    }
+  }
+
+  /** Full reference entry (HTML with <i> for italics). Missing fields are simply left out. */
+  function reference(src, style = state.user.citation, n = 1) {
+    const y = src.year || 'n.d.';
+    const T = esc(src.title);
+    const type = src.type || (src.journal ? 'article' : 'book');
+    const doi = src.doi ? String(src.doi).replace(/^https?:\/\/(dx\.)?doi\.org\//i, '') : '';
+    const J = esc(src.journal || ''), v = src.volume, iss = src.issue, r = src.range || '';
+    const pub = esc(src.publisher || ''), pl = esc(src.place || '');
+    const a = src.authors || [];
+    const creator = (fmt) => (src.org ? esc(src.org) : a.length ? fmt() : '');
+
+    // Names per style
+    const names = {
+      'rmit-harvard': () => esc(joinNames(a.map(x => `${x.family}${x.given ? ' ' + initials(x.given, false) : ''}`), ', ', ' and ')),
+      apa7: () => esc(joinNames(a.map(x => `${x.family}${x.given ? ', ' + initials(x.given, true) : ''}`), ', ', a.length > 1 ? ', & ' : '')),
+      ieee: () => esc(joinNames(a.map(x => `${x.given ? initials(x.given, true) + ' ' : ''}${x.family}`), ', ', a.length > 2 ? ', and ' : ' and ')),
+      chicago: () => esc(joinNames(a.map((x, i) => (i === 0 ? `${x.family}${x.given ? ', ' + x.given : ''}` : `${x.given ? x.given + ' ' : ''}${x.family}`)), ', ', ', and ')),
+      vancouver: () => esc(a.map(x => `${x.family}${x.given ? ' ' + initials(x.given, false) : ''}`).join(', ')),
+      aglc4: () => esc(a.length > 3 ? `${a[0].given} ${a[0].family} et al` : joinNames(a.map(x => `${x.given ? x.given + ' ' : ''}${x.family}`), ', ', ' and '))
+    };
+    const who = creator(names[style] || names['rmit-harvard']);
+    // volume(issue) helpers
+    const vi = (sepIssue = '') => (v ? `${v}${iss ? `${sepIssue}(${iss})` : ''}` : iss ? `(${iss})` : '');
+
+    if (type === 'article') {
+      switch (style) {
+        case 'apa7': return `${who ? who + ' ' : ''}(${y}). ${T}. <i>${J}</i>${v ? `, <i>${v}</i>${iss ? `(${iss})` : ''}` : ''}${r ? `, ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
+        case 'ieee': return `[${n}] ${who ? who + ', ' : ''}“${T},” <i>${J}</i>${v ? `, vol. ${v}` : ''}${iss ? `, no. ${iss}` : ''}${r ? `, pp. ${r}` : ''}, ${y}${doi ? `, doi: ${esc(doi)}` : ''}.`;
+        case 'chicago': return `${who ? who + '. ' : ''}${y}. “${T}.” <i>${J}</i>${v ? ` ${v}` : ''}${iss ? ` (${iss})` : ''}${r ? `: ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}.` : ''}`;
+        case 'vancouver': return `${n}. ${who ? who + '. ' : ''}${T}. ${esc(src.jAbbr || src.journal || '')}. ${y}${vi() ? `;${vi()}` : ''}${r ? `:${r.replace('–', '-')}` : ''}.${doi ? ` doi:${esc(doi)}` : ''}`;
+        case 'aglc4': return `${who ? who + ', ' : ''}‘${T}’ (${y})${vi() ? ' ' + vi() : ''} <i>${J}</i>${r ? ' ' + r.split(/[–-]/)[0] : ''}`;
+        default: return `${who || `<i>${T}</i>`} (${y})${who ? ` ‘${T}’,` : ''} <i>${J}</i>${vi() ? `, ${vi()}` : ''}${r ? `:${r}` : ''}${doi ? `, doi:${esc(doi)}` : ''}.`;
+      }
+    }
+    // Book or report (organisation or authors)
+    switch (style) {
+      case 'apa7': return `${who ? who + ' ' : ''}(${y}). <i>${T}</i>.${pub && pub !== esc(src.org || '') ? ` ${pub}.` : ''}${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
+      case 'ieee': return `[${n}] ${who ? who + ', ' : ''}<i>${T}</i>.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')},` : ''} ${y}.`;
+      case 'chicago': return `${who ? who + '. ' : ''}${y}. <i>${T}</i>.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')}.` : ''}`;
+      case 'vancouver': return `${n}. ${who ? who + '. ' : ''}${T}.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')};` : ''} ${y}.`;
+      case 'aglc4': return `${who ? who + ', ' : ''}<i>${T}</i> (${[type === 'report' ? 'Report' : pub, y].filter(Boolean).join(', ')})`;
+      default: return `${who || `<i>${T}</i>`} (${y})${who ? ` <i>${T}</i>` : ''}${pub ? `, ${pub}` : ''}${pl ? `, ${pl}` : ''}.`;
+    }
+  }
+
+  /** Ordered reference list for a set of sources */
+  function referenceList(sources, style = state.user.citation) {
+    const p = currentProject();
+    const numbered = NUMERIC_STYLES.includes(style);
+    const list = sources.map(s => ({ s, n: p.sources.indexOf(s) + 1 }));
+    if (!numbered) {
+      list.sort((x, y) => sortKey(x.s).localeCompare(sortKey(y.s)));
+    } else list.sort((x, y) => x.n - y.n);
+    return list.map(({ s, n }) => ({ src: s, html: reference(s, style, n) }));
+  }
+  const sortKey = (s) => (s.org || (s.authors && s.authors[0] && s.authors[0].family) || s.title).toLowerCase();
+  const sourceNumber = (src) => Math.max(1, (currentProject()?.sources || []).indexOf(src) + 1);
+  const stripTags = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent; };
+
+  /* ------------------------------------------------------
+     4. STATE + PERSISTENCE
+     ------------------------------------------------------ */
+  /* A new account starts empty: no projects, no activity */
   function seedState() {
-    const now = Date.now();
-    const mk = (files) => files.map((f, i) => ({ id: 'x' + i + Math.random().toString(36).slice(2, 6), file: f, title: fileToTitle(f), short: '', pages: null, size: '' }));
     return {
       version: STATE_VERSION,
-      user: { name: 'Alex Nguyen', university: 'Northbridge University', citation: 'APA 7', showAiLabels: true, compactCards: false },
-      currentProjectId: DEMO_PROJECT,
-      projects: [
-        {
-          id: DEMO_PROJECT, title: 'Social Media Use and Adolescent Mental Health', course: 'PSYC 3020',
-          question: 'How does social media use affect the mental health of adolescents aged 13–18?',
-          description: 'Literature review for Research Methods. Focus on mechanisms (sleep, social comparison) rather than screen time alone.',
-          sources: DEMO_SOURCES.map(s => ({ ...s })), updated: now - 2 * HOUR, created: now - 18 * DAY, due: '2026-11-27'
-        },
-        {
-          id: 'p2', title: 'Urban Green Space and Heat Resilience', course: 'GEOG 2140',
-          question: 'To what extent do urban parks and tree canopy reduce heat exposure in dense neighbourhoods?',
-          description: 'Comparing cooling effects of parks, street trees and green roofs for a policy brief.',
-          sources: mk(['Kumar_2021_Urban_Canopy_Cooling.pdf', 'Morrison_2019_Park_Cool_Islands.pdf', 'City_Heat_Vulnerability_Index_2024.pdf', 'Tanaka_2022_Green_Roofs_Review.pdf', 'Silva_2020_Heat_and_Health_Equity.pdf', 'Moreau_2023_Street_Tree_Microclimate.pdf']),
-          sampleEvidence: 18, updated: now - 2 * DAY, created: now - 30 * DAY
-        },
-        {
-          id: 'p3', title: 'Generative AI Tutors in First-Year Writing', course: 'EDUC 1500',
-          question: 'Do AI writing assistants improve the quality of first-year students’ argumentative essays?',
-          description: 'Mixed-methods proposal examining feedback quality, student reliance and academic integrity.',
-          sources: mk(['Brennan_2024_AI_Feedback_Writing.pdf', 'Osei_2023_Student_Reliance_LLMs.pdf', 'Faculty_Survey_AI_Use_2024.pdf', 'Li_Moreno_2024_Revision_Behaviour.pdf', 'Integrity_Policy_Review_2023.pdf']),
-          sampleEvidence: 9, updated: now - 6 * DAY, created: now - 21 * DAY
-        },
-        {
-          id: 'p4', title: 'Plant-Based Diets and Athletic Recovery', course: 'NUTR 2200',
-          question: 'Can plant-based diets support muscle recovery in endurance athletes as effectively as omnivorous diets?',
-          description: 'Short evidence review for a sports nutrition seminar.',
-          sources: mk(['Ferreira_2022_Plant_Protein_Recovery.pdf', 'Novak_2021_Endurance_Diet_RCT.pdf', 'Sports_Nutrition_Position_Stand_2023.pdf']),
-          sampleEvidence: 4, updated: now - 19 * DAY, created: now - 40 * DAY
-        }
-      ],
-      saved: { [DEMO_PROJECT]: ['e1', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e9', 'e10', 'e11'] },
-      outlines: {
-        [DEMO_PROJECT]: {
-          thesis: 'While heavy, passive social media use is associated with poorer adolescent mental health, the overall effect is modest and operates largely through sleep disruption and social comparison rather than screen time itself.',
-          args: [
-            { id: 'a1', type: 'supporting', claim: 'Overall screen time has only a small direct association with wellbeing', explanation: 'Large cohort data shows the amount of use explains very little variance, and the effect fades once baseline wellbeing is controlled.', evidence: ['e1', 'e11'] },
-            { id: 'a2', type: 'supporting', claim: 'Passive use and upward comparison drive negative outcomes', explanation: 'How teens use platforms matters: passive scrolling invites comparison, which explains lower self-esteem — particularly for girls.', evidence: ['e3', 'e4', 'e5'] },
-            { id: 'a3', type: 'supporting', claim: 'Night-time use harms mood indirectly through poorer sleep', explanation: 'Phone use after lights-out shortens sleep, and sleep quality accounts for a large share of the link with low mood.', evidence: ['e6', 'e7'] },
-            { id: 'a4', type: 'counter', claim: 'Social media can also protect wellbeing by providing connection', explanation: 'For marginalised and rural youth, online communities reduce isolation and offer support that may be unavailable offline.', evidence: ['e8', 'e9', 'e10'] }
-          ]
-        }
-      },
-      activity: [
-        { icon: 'list-tree', text: 'Added counterargument "Social media can also protect wellbeing…"', projectId: DEMO_PROJECT, time: now - 2 * HOUR },
-        { icon: 'bookmark-plus', text: 'Saved evidence "Sleep quality is a key pathway to low mood"', projectId: DEMO_PROJECT, time: now - 5 * HOUR },
-        { icon: 'message-square', text: 'Asked "How does night-time phone use affect mood?"', projectId: DEMO_PROJECT, time: now - 6 * HOUR },
-        { icon: 'file-up', text: 'Uploaded Youth_Digital_Habits_Survey_2023.pdf', projectId: DEMO_PROJECT, time: now - 1 * DAY },
-        { icon: 'file-up', text: 'Uploaded 2 sources to Urban Green Space and Heat Resilience', projectId: 'p2', time: now - 2 * DAY },
-        { icon: 'folder-plus', text: 'Created project "Generative AI Tutors in First-Year Writing"', projectId: 'p3', time: now - 21 * DAY }
-      ]
+      lang: state0Lang(),
+      seenLanding: false,
+      tourDone: false,
+      user: { name: '', university: 'RMIT University', program: '', citation: 'rmit-harvard', showAiLabels: true },
+      currentProjectId: null,
+      projects: [],
+      saved: {},
+      outlines: {},
+      activity: [],
+      userEvidence: {},
+      maps: {}
     };
+  }
+
+  function state0Lang() {
+    return (navigator.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en';
   }
 
   function loadState() {
@@ -252,38 +651,62 @@
         const parsed = JSON.parse(raw);
         if (parsed && parsed.version === STATE_VERSION) return parsed;
       }
-    } catch (err) { /* storage unavailable — fall back to seed */ }
+    } catch (err) { /* storage unavailable, fall back to seed */ }
     return seedState();
   }
-
   function persist() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (err) { /* ignore */ }
   }
 
   let state = loadState();
+  state.userEvidence ||= {};
+  state.maps ||= {};
+  // Older saves may still contain the removed sample project: drop it
+  if (state.projects.some(p => p.isSample)) {
+    state.projects = state.projects.filter(p => !p.isSample);
+    delete state.saved.p1; delete state.outlines.p1;
+    state.activity = state.activity.filter(a => a.projectId !== 'p1');
+    if (!state.projects.some(p => p.id === state.currentProjectId)) state.currentProjectId = state.projects[0] ? state.projects[0].id : null;
+    persist();
+  }
 
   /* Transient UI state (not persisted) */
   const ui = {
     lib: { query: '', theme: 'all', source: 'all', tab: 'all' },
-    answer: null,          // { question, text, evidence[] }
+    answer: null,
     asking: false,
-    mapSelected: null,     // 't:usage' | 'e:e3'
+    mapSelected: null,
     mapFilters: { theme: true, similar: true, different: true, contradicts: true },
     editingThesis: false,
     editingArg: null,
     newArgId: null,
     projectSearch: '',
-    pendingFiles: []
+    pendingFiles: [],
+    refStyle: null,
+    resultCache: {},
+    refSources: null
   };
 
   /* ------------------------------------------------------
-     3. HELPERS
+     5. HELPERS
      ------------------------------------------------------ */
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const icons = () => { if (window.lucide) window.lucide.createIcons(); };
+
+  /** Translate a UI key, with {placeholders} */
+  function t(key, params = {}) {
+    const entry = STR[key];
+    let s = entry ? entry[state.lang === 'vi' ? 1 : 0] : key;
+    return s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? L(params[k]) : `{${k}}`));
+  }
+  /** Localise a value that may be a plain string or { en, vi } */
+  function L(v) {
+    if (v && typeof v === 'object' && ('en' in v || 'vi' in v)) return v[state.lang] ?? v.en;
+    return v ?? '';
+  }
 
   function fileToTitle(name) {
     return name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -293,54 +716,51 @@
     if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB';
     return (bytes / 1024 / 1024).toFixed(1) + ' MB';
   }
+  const locale = () => state.lang === 'vi' ? 'vi-VN' : 'en-GB';
   function relTime(ts) {
-    const diff = Date.now() - ts;
-    const min = Math.round(diff / 6e4);
-    if (min < 1) return 'just now';
-    if (min < 60) return `${min} min ago`;
+    const min = Math.round((Date.now() - ts) / 6e4);
+    if (min < 1) return t('time.now');
+    if (min < 60) return t('time.min', { n: min });
     const h = Math.round(min / 60);
-    if (h < 24) return `${h} hour${h === 1 ? '' : 's'} ago`;
+    if (h < 24) return t(h === 1 ? 'time.hour' : 'time.hours', { n: h });
     const d = Math.round(h / 24);
-    if (d === 1) return 'yesterday';
-    if (d < 7) return `${d} days ago`;
-    return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (d === 1) return t('time.yesterday');
+    if (d < 7) return t('time.days', { n: d });
+    return new Date(ts).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
   }
   function highlight(text, query) {
     const safe = esc(text);
     if (!query) return safe;
-    const terms = query.trim().split(/\s+/).filter(t => t.length > 1).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const terms = query.trim().split(/\s+/).filter(x => x.length > 1).map(x => esc(x).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     if (!terms.length) return safe;
-    return safe.replace(new RegExp(`(${terms.map(esc).join('|')})`, 'gi'), '<mark>$1</mark>');
+    return safe.replace(new RegExp(`(${terms.join('|')})`, 'gi'), '<mark>$1</mark>');
   }
+  const plural = (n, one, many) => n === 1 ? t(one) : t(many, { n });
 
-  const currentProject = () => state.projects.find(p => p.id === state.currentProjectId) || state.projects[0];
-  const projectEvidence = (pid = currentProject().id) => EVIDENCE.filter(e => e.projectId === pid);
-  const hasRealEvidence = (pid) => EVIDENCE.some(e => e.projectId === pid);
-  const savedList = (pid = currentProject().id) => (state.saved[pid] ||= []);
+  const currentProject = () => state.projects.find(p => p.id === state.currentProjectId) || state.projects[0] || null;
+  /* A project's evidence = the passages the student saved from their own PDFs */
+  const projectEvidence = (pid = currentProject()?.id) => (pid ? savedList(pid).map(evidenceById).filter(Boolean) : []);
+  const savedList = (pid = currentProject()?.id) => pid ? (state.saved[pid] ||= []) : [];
   const isSaved = (id) => savedList().includes(id);
-  const evidenceById = (id) => EVIDENCE.find(e => e.id === id);
+  const evidenceById = (id) => ui.resultCache[id] || Object.values(state.userEvidence || {}).map(m => m[id]).find(Boolean) || null;
   const sourceOf = (ev) => {
     const p = state.projects.find(x => x.id === ev.projectId);
-    return (p && p.sources.find(s => s.id === ev.sourceId)) || DEMO_SOURCES.find(s => s.id === ev.sourceId);
+    return (p && p.sources.find(s => s.id === ev.sourceId)) || { id: ev.sourceId, file: '?', title: '?', authors: [] };
   };
-  const evidenceCountFor = (p) => hasRealEvidence(p.id) ? savedList(p.id).length : (p.sampleEvidence || 0) + savedList(p.id).length;
-  const outlineFor = (pid = currentProject().id) => {
-    if (!state.outlines[pid]) {
-      const p = state.projects.find(x => x.id === pid);
-      state.outlines[pid] = { thesis: '', args: [], _question: p ? p.question : '' };
-    }
-    return state.outlines[pid];
-  };
+  const shortCite = (ev) => inText(sourceOf(ev), ev.page, state.user.citation, sourceNumber(sourceOf(ev)));
+  const evidenceCountFor = (p) => savedList(p.id).length;
+  const outlineFor = (pid = currentProject()?.id) => (state.outlines[pid] ||= { thesis: '', args: [] });
 
   function touchProject(pid = currentProject().id) {
     const p = state.projects.find(x => x.id === pid);
     if (p) p.updated = Date.now();
   }
-  function logActivity(icon, text, pid = currentProject().id) {
-    state.activity.unshift({ icon, text, projectId: pid, time: Date.now() });
+  function logActivity(icon, key, params = {}, pid = currentProject()?.id) {
+    state.activity.unshift({ icon, key, params, projectId: pid, time: Date.now() });
     state.activity = state.activity.slice(0, 25);
   }
   function commit() { persist(); updateShell(); }
+  const truncate = (s, n = 60) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 
   function toast(message, { icon = 'check', type = '' } = {}) {
     const el = document.createElement('div');
@@ -351,24 +771,41 @@
     setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 220); }, 2800);
   }
 
+  function copyText(txt, done) {
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { toast(t('b.copyFail'), { icon: 'x', type: 'warn' }); }
+      ta.remove();
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(txt).then(done, fallback);
+    else fallback();
+  }
+
+  /* Apply translations to static markup in index.html */
+  function applyStaticI18n() {
+    document.documentElement.lang = state.lang;
+    $$('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    $$('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    $$('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+    $$('[data-action="set-lang"]').forEach(b => b.classList.toggle('active', b.dataset.lang === state.lang));
+  }
+
   /* ------------------------------------------------------
-     4. ROUTER & SHELL
+     6. ROUTER & SHELL
      ------------------------------------------------------ */
-  const PAGES = ['dashboard', 'projects', 'evidence', 'map', 'builder', 'settings'];
+  const PAGES = ['home', 'dashboard', 'projects', 'evidence', 'map', 'builder', 'settings'];
   const RENDERERS = {
-    dashboard: renderDashboard,
-    projects: renderProjects,
-    evidence: renderEvidence,
-    map: renderMap,
-    builder: renderBuilder,
-    settings: renderSettings
+    dashboard: renderDashboard, projects: renderProjects, evidence: renderEvidence,
+    map: renderMap, builder: renderBuilder, settings: renderSettings
   };
 
   const currentPage = () => {
     const h = location.hash.replace('#', '');
-    return PAGES.includes(h) ? h : 'dashboard';
+    if (PAGES.includes(h)) return h;
+    return state.seenLanding ? 'dashboard' : 'home';
   };
-
   function navigate(page) {
     if (location.hash === '#' + page) renderPage();
     else location.hash = page;
@@ -376,79 +813,221 @@
 
   function renderPage({ keepScroll = false } = {}) {
     const page = currentPage();
-    $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + page));
-    $$('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.page === page));
-    RENDERERS[page]();
-    updateShell();
+    applyStaticI18n();
+    const onLanding = page === 'home';
+    $('#landing').hidden = !onLanding;
+    $('#app').hidden = onLanding;
+    if (onLanding) {
+      renderLanding();
+    } else {
+      $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + page));
+      $$('.nav-item').forEach(a => a.classList.toggle('active', a.dataset.page === page));
+      if (!currentProject() && ['evidence', 'map', 'builder'].includes(page)) renderNoProject(page);
+      else RENDERERS[page]();
+      updateShell();
+      closeSidebar();
+    }
     icons();
-    closeSidebar();
     if (!keepScroll) window.scrollTo({ top: 0 });
   }
-
-  /* Re-render the current page without jumping to the top */
   const refresh = () => renderPage({ keepScroll: true });
 
   function updateShell() {
     const p = currentProject();
-    // Project switcher
     const sel = $('#projectSelect');
-    sel.innerHTML = state.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(x.title)}</option>`).join('');
-    // Saved count badge
+    sel.disabled = !p;
+    sel.innerHTML = p
+      ? state.projects.map(x => `<option value="${x.id}" ${x.id === p.id ? 'selected' : ''}>${esc(L(x.title))}</option>`).join('')
+      : `<option>${t('top.noProject')}</option>`;
     const n = savedList().length;
     $('#navSavedCount').textContent = n ? n : '';
-    // Profile
-    const initials = state.user.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    $('#avatar').textContent = initials || 'U';
-    $('#profileName').textContent = state.user.name;
+    const name = state.user.name.trim();
+    $('#avatar').innerHTML = name ? esc(name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase()) : '<i data-lucide="user"></i>';
+    $('#profileName').textContent = name || t('user.guest');
     $('#profileUni').textContent = state.user.university;
-    // Sidebar project progress
+    if (!p) { $('#sidebarProject').innerHTML = ''; icons(); return; }
     const prog = projectProgress(p);
     $('#sidebarProject').innerHTML = `
       <div class="side-project">
-        <small>Active project</small>
-        <strong>${esc(p.title)}</strong>
+        <small>${t('side.active')}</small>
+        <strong>${esc(L(p.title))}</strong>
         <div class="progress"><span style="width:${prog.pct}%"></span></div>
-        <div class="progress-label"><span>${prog.done} of 4 stages</span><span>${prog.pct}%</span></div>
+        <div class="progress-label"><span>${t('side.stages', { n: prog.done })}</span><span>${prog.pct}%</span></div>
       </div>`;
   }
 
   function projectProgress(p) {
     const outline = state.outlines[p.id];
-    const stages = [
-      p.sources.length > 0,
-      evidenceCountFor(p) > 0,
-      hasRealEvidence(p.id),
-      !!(outline && outline.args.length)
-    ];
+    const stages = [p.sources.length > 0, evidenceCountFor(p) > 0, !!(state.maps[p.id] && state.maps[p.id].themes.length), !!(outline && outline.args.length)];
     const done = stages.filter(Boolean).length;
     return { stages, done, pct: Math.round(done / 4 * 100) };
   }
 
+  const isNarrow = () => window.matchMedia('(max-width: 1024px)').matches;
   function openSidebar() { $('.app').classList.add('nav-open'); }
   function closeSidebar() { $('.app').classList.remove('nav-open'); }
 
+  function setLang(lang) {
+    if (state.lang === lang) return;
+    state.lang = lang;
+    ui.answer = null;
+    persist();
+    refresh();
+    if (tour) positionTour();
+  }
+
   /* ------------------------------------------------------
-     5. PAGE RENDERERS
+     7. LANDING PAGE
+     ------------------------------------------------------ */
+  function renderLanding() {
+    const s1 = EXAMPLE_SOURCE;
+    const styleRow = (st) => `
+      <div class="ref-sample">
+        <span class="ref-style">${CITATION_STYLES[st].label}</span>
+        <code>${esc(inText(s1, 9, st, 1))}</code>
+        <p>${reference(s1, st, 1)}</p>
+      </div>`;
+
+    $('#landing').innerHTML = `
+      <header class="l-nav">
+        <div class="l-wrap l-nav-inner">
+          <a class="brand" href="#home">
+            <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="32" height="32"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M9 22 L15 13 L23 18" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="22" r="2.6" fill="#fff"/><circle cx="15" cy="13" r="2.6" fill="#fff"/><circle cx="23" cy="18" r="2.6" fill="#fff"/></svg></span>
+            <span class="brand-text"><strong>Trace &amp; Think</strong></span>
+          </a>
+          <nav class="l-links">
+            <a href="#" data-action="scroll-to" data-target="l-how">${t('l.how')}</a>
+            <a href="#" data-action="scroll-to" data-target="l-features">${t('l.features')}</a>
+            <a href="#" data-action="scroll-to" data-target="l-rmit">${t('l.rmit')}</a>
+          </nav>
+          <div class="l-nav-actions">
+            <div class="lang-switch" role="group" aria-label="Language">
+              <button data-action="set-lang" data-lang="en" class="${state.lang === 'en' ? 'active' : ''}">EN</button>
+              <button data-action="set-lang" data-lang="vi" class="${state.lang === 'vi' ? 'active' : ''}">VI</button>
+            </div>
+            <button class="btn btn-outline btn-sm l-open" data-action="enter-app">${t('l.open')}</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="l-hero">
+        <div class="l-wrap l-hero-grid">
+          <div>
+            <p class="l-eyebrow"><i data-lucide="graduation-cap"></i>${t('l.eyebrow')}</p>
+            <h1>${t('l.h1a')}<br><span>${t('l.h1b')}</span></h1>
+            <p class="l-lead">${t('l.lead')}</p>
+            <div class="l-cta">
+              <button class="btn btn-primary btn-lg" data-action="enter-app" data-tour-start="1">${t('l.cta')}<i data-lucide="arrow-right"></i></button>
+              <button class="btn btn-outline btn-lg" data-action="scroll-to" data-target="l-how">${t('l.cta2')}</button>
+            </div>
+            <p class="l-note">${t('l.ctaNote')}</p>
+          </div>
+
+          <div class="l-preview" aria-hidden="true">
+            <div class="l-preview-q"><i data-lucide="message-square"></i>${t('l.mockQ')}</div>
+            <div class="evidence-card">
+              <div class="ev-tags"><span class="tag"><span class="dot" style="--c:#357d97"></span>${t('l.mockTheme')}</span><span class="saved-badge"><i data-lucide="bookmark-check"></i>${t('ev.savedBadge')}</span></div>
+              <h3>${t('l.mockTitle')}</h3>
+              <blockquote class="ev-excerpt"><span class="label-src"><i data-lucide="quote"></i>${t('ev.excerpt')}</span><p>“${highlight(EXAMPLE_EXCERPT, 'smartphone lights-out sleep')}”</p></blockquote>
+              <div class="ev-foot">
+                <span class="ev-src"><i data-lucide="file-text"></i><span>${esc(s1.file)}</span></span>
+                <span class="page-pill">${t('common.page', { n: 5 })}</span>
+                <span class="ev-cite">${esc(inText(s1, 5, 'rmit-harvard'))}</span>
+              </div>
+            </div>
+            <p class="l-preview-note">${t('l.mockNote')}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="l-section">
+        <div class="l-wrap">
+          <div class="l-head"><h2>${t('l.probT')}</h2><p>${t('l.probS')}</p></div>
+          <div class="l-grid3">
+            ${[['files', 'l.p1t', 'l.p1b'], ['unlink', 'l.p2t', 'l.p2b'], ['puzzle', 'l.p3t', 'l.p3b']].map(([ic, a, b]) => `
+              <div class="l-card"><span class="l-icon muted"><i data-lucide="${ic}"></i></span><h3>${t(a)}</h3><p>${t(b)}</p></div>`).join('')}
+          </div>
+        </div>
+      </section>
+
+      <section class="l-section l-alt" id="l-how">
+        <div class="l-wrap">
+          <div class="l-head"><h2>${t('l.howT')}</h2><p>${t('l.howS')}</p></div>
+          <ol class="l-steps">
+            ${[['folder-plus', 'l.h1t', 'l.h1d'], ['library', 'l.h2t', 'l.h2d'], ['waypoints', 'l.h3t', 'l.h3d'], ['list-tree', 'l.h4t', 'l.h4d']].map(([ic, a, b], i) => `
+              <li class="l-step"><span class="l-step-num">${i + 1}</span><span class="l-icon"><i data-lucide="${ic}"></i></span><h3>${t(a)}</h3><p>${t(b)}</p></li>`).join('')}
+          </ol>
+        </div>
+      </section>
+
+      <section class="l-section" id="l-features">
+        <div class="l-wrap">
+          <div class="l-head"><h2>${t('l.featT')}</h2></div>
+          <div class="l-grid3">
+            ${[['file-search', 'l.f1t', 'l.f1d'], ['sparkles', 'l.f2t', 'l.f2d'], ['waypoints', 'l.f3t', 'l.f3d'], ['list-tree', 'l.f4t', 'l.f4d'], ['book-marked', 'l.f5t', 'l.f5d'], ['languages', 'l.f6t', 'l.f6d']].map(([ic, a, b]) => `
+              <div class="l-card"><span class="l-icon"><i data-lucide="${ic}"></i></span><h3>${t(a)}</h3><p>${t(b)}</p></div>`).join('')}
+          </div>
+        </div>
+      </section>
+
+      <section class="l-section l-alt" id="l-rmit">
+        <div class="l-wrap l-rmit">
+          <div>
+            <h2>${t('l.rmitT')}</h2>
+            <p class="l-sub">${t('l.rmitS')}</p>
+            <ul class="l-checks">
+              ${['l.r1', 'l.r2', 'l.r3', 'l.r4'].map(k => `<li><i data-lucide="circle-check"></i>${t(k)}</li>`).join('')}
+            </ul>
+          </div>
+          <div class="panel l-refs">
+            <h3>${t('l.sampleRef')}</h3>
+            ${['rmit-harvard', 'apa7', 'ieee'].map(styleRow).join('')}
+          </div>
+        </div>
+      </section>
+
+      <section class="l-section l-final">
+        <div class="l-wrap">
+          <h2>${t('l.finalT')}</h2>
+          <p>${t('l.finalS')}</p>
+          <button class="btn btn-primary btn-lg" data-action="enter-app" data-tour-start="1">${t('l.cta')}<i data-lucide="arrow-right"></i></button>
+        </div>
+      </section>
+
+      <footer class="l-footer"><div class="l-wrap">© 2026 Trace &amp; Think · ${t('l.footer')}</div></footer>`;
+  }
+
+  function enterApp() {
+    const firstTime = !state.seenLanding;
+    state.seenLanding = true;
+    persist();
+    navigate('dashboard');
+    if (firstTime || !state.tourDone) setTimeout(startTour, 250);
+  }
+
+  /* ------------------------------------------------------
+     8. APP PAGE RENDERERS
      ------------------------------------------------------ */
 
   /* ---------- Shared: project card ---------- */
   function projectCard(p, { deletable = false } = {}) {
     const isCurrent = p.id === state.currentProjectId;
+    const title = L(p.title);
     return `
-      <article class="project-card ${isCurrent ? 'current' : ''}" data-action="open-project" data-id="${p.id}" tabindex="0" role="button" aria-label="Open ${esc(p.title)}">
+      <article class="project-card ${isCurrent ? 'current' : ''}" data-action="open-project" data-id="${p.id}" tabindex="0" role="button" aria-label="${esc(title)}">
         <div class="pc-top">
           ${p.course ? `<span class="course-tag">${esc(p.course)}</span>` : '<span></span>'}
-          ${deletable && state.projects.length > 1 ? `<button class="icon-btn sm danger pc-delete" data-action="delete-project" data-id="${p.id}" aria-label="Delete project"><i data-lucide="trash-2"></i></button>` : ''}
+          ${deletable ? `<button class="icon-btn sm danger pc-delete" data-action="delete-project" data-id="${p.id}" aria-label="${t('proj.delete')}"><i data-lucide="trash-2"></i></button>` : ''}
         </div>
-        <h3>${esc(p.title)}</h3>
-        <p class="pc-q">${esc(p.question || p.description || 'No research question yet.')}</p>
+        <h3>${esc(title)}</h3>
+        <p class="pc-q">${esc(L(p.question) || L(p.description) || t('proj.noQuestion'))}</p>
         <div class="pc-meta">
-          <span><i data-lucide="file-text"></i>${p.sources.length} source${p.sources.length === 1 ? '' : 's'}</span>
-          <span><i data-lucide="bookmark"></i>${evidenceCountFor(p)} evidence cards</span>
+          <span><i data-lucide="file-text"></i>${plural(p.sources.length, 'common.source1', 'common.sources')}</span>
+          <span><i data-lucide="bookmark"></i>${t('common.evCards', { n: evidenceCountFor(p) })}</span>
         </div>
         <div class="pc-foot">
-          <span>Edited ${relTime(p.updated)}</span>
-          ${isCurrent ? '<span class="active-badge">Active</span>' : ''}
+          <span>${t('common.edited', { t: relTime(p.updated) })}</span>
+          ${isCurrent ? `<span class="active-badge">${t('common.active')}</span>` : ''}
         </div>
       </article>`;
   }
@@ -457,32 +1036,33 @@
   function evidenceCard(ev, { query = '' } = {}) {
     const saved = isSaved(ev.id);
     const src = sourceOf(ev);
-    const showAi = state.user.showAiLabels;
-    const tags = ev.themes.map(t => `<span class="tag"><span class="dot" style="--c:${THEMES[t].color}"></span>${THEMES[t].name}</span>`).join('');
+    query = (ev.terms || []).join(' ') || query;   // highlight the words that matched in the PDF passage
+    const th = saved ? themeOf(ev) : null;
+    const tags = th ? `<span class="tag"><span class="dot" style="--c:${th.color}"></span>${esc(th.name)}</span>` : '';
     return `
       <article class="evidence-card ${saved ? 'is-saved' : ''}" id="card-${ev.id}">
         <header class="ev-head">
           <div>
-            <div class="ev-tags">${tags}${saved ? '<span class="saved-badge"><i data-lucide="bookmark-check"></i>Saved</span>' : ''}</div>
-            <h3>${highlight(ev.title, query)}</h3>
+            <div class="ev-tags">${tags}${saved ? `<span class="saved-badge"><i data-lucide="bookmark-check"></i>${t('ev.savedBadge')}</span>` : ''}</div>
+            <h3>${highlight(L(ev.title), query)}</h3>
           </div>
           ${saved
-            ? `<button class="btn btn-sm btn-danger" data-action="toggle-save" data-id="${ev.id}"><i data-lucide="bookmark-minus"></i>Remove</button>`
-            : `<button class="btn btn-sm btn-outline" data-action="toggle-save" data-id="${ev.id}"><i data-lucide="bookmark-plus"></i>Save Evidence</button>`}
+            ? `<button class="btn btn-sm btn-danger" data-action="toggle-save" data-id="${ev.id}"><i data-lucide="bookmark-minus"></i>${t('ev.remove')}</button>`
+            : `<button class="btn btn-sm btn-outline" data-action="toggle-save" data-id="${ev.id}"><i data-lucide="bookmark-plus"></i>${t('ev.save')}</button>`}
         </header>
-        <div class="ev-ai">
-          ${showAi ? '<span class="label-ai"><i data-lucide="sparkles"></i>AI explanation</span>' : ''}
-          <p>${highlight(ev.extracted, query)}</p>
-        </div>
         <blockquote class="ev-excerpt">
-          <span class="label-src"><i data-lucide="quote"></i>Original excerpt</span>
+          <span class="label-src"><i data-lucide="quote"></i>${t('ev.excerpt')}${state.lang === 'vi' ? ` <em class="lang-note">· ${t('ev.excerptNote')}</em>` : ''}</span>
           <p>“${highlight(ev.excerpt, query)}”</p>
         </blockquote>
         <footer class="ev-foot">
           <span class="ev-src" title="${esc(src.title)}"><i data-lucide="file-text"></i><span>${esc(src.file)}</span></span>
-          <span class="page-pill">p. ${ev.page}</span>
-          ${src.short ? `<span class="ev-cite">(${esc(src.short)})</span>` : ''}
-          <button class="link-btn" data-action="view-in-map" data-id="${ev.id}"><i data-lucide="waypoints"></i>View in map</button>
+          <span class="page-pill">${t('common.page', { n: ev.page })}</span>
+          <span class="ev-cite" title="${CITATION_STYLES[state.user.citation].label}">${inText(src, ev.page, state.user.citation, sourceNumber(src), true)}</span>
+          <span class="ev-actions">
+            ${!isComplete(src) ? `<button class="link-btn warn" data-action="edit-source" data-id="${src.id}"><i data-lucide="pencil"></i>${t('src.addDetails')}</button>` : ''}
+            <button class="link-btn" data-action="copy-ref" data-source="${src.id}"><i data-lucide="copy"></i>${t('ev.copyRef')}</button>
+            ${!saved ? '' : `<button class="link-btn" data-action="view-in-map" data-id="${ev.id}"><i data-lucide="waypoints"></i>${t('ev.viewMap')}</button>`}
+          </span>
         </footer>
       </article>`;
   }
@@ -491,9 +1071,9 @@
   function renderDashboard() {
     const p = currentProject();
     const hour = new Date().getHours();
-    const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const greet = t(hour < 12 ? 'dash.morning' : hour < 18 ? 'dash.afternoon' : 'dash.evening');
     const firstName = state.user.name.split(' ')[0];
-    const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const dateStr = new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
     const totals = {
       projects: state.projects.length,
       sources: state.projects.reduce((n, x) => n + x.sources.length, 0),
@@ -501,47 +1081,50 @@
       sections: Object.values(state.outlines).reduce((n, o) => n + o.args.length, 0)
     };
     const recent = [...state.projects].sort((a, b) => b.updated - a.updated).slice(0, 3);
-    const prog = projectProgress(p);
-    const outline = state.outlines[p.id];
-    const steps = [
-      { n: 1, title: 'Upload sources', meta: `${p.sources.length} PDF${p.sources.length === 1 ? '' : 's'} added`, page: 'evidence', done: prog.stages[0] },
-      { n: 2, title: 'Extract evidence', meta: `${evidenceCountFor(p)} cards saved`, page: 'evidence', done: prog.stages[1] },
-      { n: 3, title: 'Explore connections', meta: hasRealEvidence(p.id) ? `${Object.keys(THEMES).length} themes · ${CONNECTIONS.length} links` : 'Awaiting evidence', page: 'map', done: prog.stages[2] },
-      { n: 4, title: 'Build argument', meta: outline && outline.args.length ? `${outline.args.length} sections drafted` : 'Not started', page: 'builder', done: prog.stages[3] }
+    const prog = p ? projectProgress(p) : null;
+    const outline = p && state.outlines[p.id];
+    const steps = !p ? [] : [
+      { title: t('dash.s1'), meta: t('dash.s1m', { n: p.sources.length }), page: 'evidence' },
+      { title: t('dash.s2'), meta: t('dash.s2m', { n: evidenceCountFor(p) }), page: 'evidence' },
+      { title: t('dash.s3'), meta: (state.maps[p.id] && state.maps[p.id].themes.length) ? t('dash.s3m', { a: state.maps[p.id].themes.length, b: state.maps[p.id].links.length }) : t('dash.s3w'), page: 'map' },
+      { title: t('dash.s4'), meta: outline && outline.args.length ? t('dash.s4m', { n: outline.args.length }) : t('dash.s4w'), page: 'builder' }
     ];
 
     $('#page-dashboard').innerHTML = `
       <div class="welcome">
         <div>
-          <p class="eyebrow">${dateStr}</p>
-          <h1>${greet}, ${esc(firstName)}</h1>
-          <p class="sub">Research with clarity. Think with evidence. Pick up where you left off or start a new line of inquiry.</p>
+          <p class="eyebrow">${esc(dateStr)}</p>
+          <h1>${greet}${firstName ? ', ' + esc(firstName) : ''}</h1>
+          <p class="sub">${t('dash.sub')}</p>
         </div>
-        <button class="btn btn-primary btn-lg" data-action="open-new-project"><i data-lucide="plus"></i>Create New Project</button>
+        <button class="btn btn-primary btn-lg" data-action="open-new-project"><i data-lucide="plus"></i>${t('dash.create')}</button>
       </div>
 
+      ${!state.tourDone ? `<div class="notice notice-tour"><i data-lucide="compass"></i><span>${t('dash.newHere')}</span><button class="btn btn-primary btn-sm" data-action="start-tour">${t('dash.startTour')}</button></div>` : ''}
+
       <div class="stats-row">
-        ${stat('folder-open', totals.projects, 'Research projects')}
-        ${stat('file-text', totals.sources, 'Source documents')}
-        ${stat('bookmark', totals.evidence, 'Evidence cards')}
-        ${stat('list-tree', totals.sections, 'Argument sections')}
+        ${stat('folder-open', totals.projects, t('dash.statProjects'))}
+        ${stat('file-text', totals.sources, t('dash.statSources'))}
+        ${stat('bookmark', totals.evidence, t('dash.statEvidence'))}
+        ${stat('list-tree', totals.sections, t('dash.statSections'))}
       </div>
 
       <div class="dash-grid">
         <div class="dash-col">
+          ${!p ? emptyProjectBlock() : `
           <section class="panel workflow">
             <div class="workflow-head">
               <div>
-                <p class="eyebrow">Continue your research</p>
-                <h2>${esc(p.title)}</h2>
-                <p>${esc(p.question || 'Add a research question to focus your project.')}</p>
+                <p class="eyebrow">${t('dash.continue')}</p>
+                <h2>${esc(L(p.title))}</h2>
+                <p>${esc(L(p.question) || t('dash.noQuestion'))}</p>
               </div>
-              <span class="count-pill">${prog.pct}% complete</span>
+              <span class="count-pill">${t('dash.complete', { n: prog.pct })}</span>
             </div>
             <div class="steps">
-              ${steps.map(s => `
+              ${steps.map((s, i) => `
                 <button class="step" data-action="go" data-page="${s.page}">
-                  <span class="step-num">Step ${s.n}${s.done ? '<span class="done"><i data-lucide="circle-check"></i></span>' : ''}</span>
+                  <span class="step-num">${t('dash.step', { n: i + 1 })}${prog.stages[i] ? '<span class="done"><i data-lucide="circle-check"></i></span>' : ''}</span>
                   <strong>${s.title}</strong>
                   <span class="meta">${s.meta}</span>
                 </button>`).join('')}
@@ -550,28 +1133,44 @@
 
           <section>
             <div class="section-head">
-              <h2>Recent projects</h2>
-              <a href="#projects" class="link-btn">View all <i data-lucide="arrow-right"></i></a>
+              <h2>${t('dash.recent')}</h2>
+              <a href="#projects" class="link-btn">${t('common.viewAll')} <i data-lucide="arrow-right"></i></a>
             </div>
             <div class="project-grid">${recent.map(x => projectCard(x)).join('')}</div>
-          </section>
+          </section>`}
         </div>
 
         <aside class="panel">
-          <div class="panel-head"><h2>Recent activity</h2></div>
+          <div class="panel-head"><h2>${t('dash.activity')}</h2></div>
           <div class="panel-body">
             <ul class="activity-list">
               ${state.activity.slice(0, 7).map(a => {
                 const proj = state.projects.find(x => x.id === a.projectId);
                 return `<li>
                   <span class="act-icon"><i data-lucide="${a.icon}"></i></span>
-                  <div class="act-text">${esc(a.text)}<small>${proj ? esc(proj.title) + ' · ' : ''}${relTime(a.time)}</small></div>
+                  <div class="act-text">${esc(t(a.key, a.params))}<small>${proj ? esc(L(proj.title)) + ' · ' : ''}${relTime(a.time)}</small></div>
                 </li>`;
-              }).join('') || '<li class="act-text">No activity yet.</li>'}
+              }).join('') || `<li class="act-text">${t('dash.noActivity')}</li>`}
             </ul>
           </div>
         </aside>
       </div>`;
+  }
+  /* Shown wherever a page needs a project but the account has none */
+  function emptyProjectBlock() {
+    return `
+      <div class="empty empty-project">
+        <div class="empty-icon"><i data-lucide="folder-plus"></i></div>
+        <h3>${t('np.title')}</h3>
+        <p>${t('np.sub')}</p>
+        <div class="empty-actions">
+          <button class="btn btn-primary" data-action="open-new-project"><i data-lucide="plus"></i>${t('dash.create')}</button>
+        </div>
+      </div>`;
+  }
+  function renderNoProject(page) {
+    const titles = { evidence: 'nav.evidence', map: 'nav.map', builder: 'nav.builder' };
+    $('#page-' + page).innerHTML = `<div class="page-header"><div><h1>${t(titles[page])}</h1></div></div>${emptyProjectBlock()}`;
   }
 
   function stat(icon, value, label) {
@@ -580,86 +1179,59 @@
 
   /* ---------- My Projects ---------- */
   function renderProjects() {
-    const q = ui.projectSearch.toLowerCase();
     $('#page-projects').innerHTML = `
       <div class="page-header">
-        <div>
-          <h1>My Projects</h1>
-          <p>Each project keeps its own sources, evidence, insight map and argument outline.</p>
-        </div>
-        <div class="actions"><button class="btn btn-primary" data-action="open-new-project"><i data-lucide="plus"></i>New project</button></div>
+        <div><h1>${t('nav.projects')}</h1><p>${t('proj.sub')}</p></div>
+        <div class="actions"><button class="btn btn-primary" data-action="open-new-project"><i data-lucide="plus"></i>${t('proj.new')}</button></div>
       </div>
       <div class="toolbar">
-        <label class="search-input"><i data-lucide="search"></i><input id="projectSearch" type="search" placeholder="Search projects…" value="${esc(ui.projectSearch)}" /></label>
+        <label class="search-input"><i data-lucide="search"></i><input id="projectSearch" type="search" placeholder="${t('proj.search')}" value="${esc(ui.projectSearch)}" /></label>
       </div>
       <div class="project-grid" id="projectGrid"></div>`;
-    renderProjectGrid(q);
+    renderProjectGrid();
   }
-
-  function renderProjectGrid(q = ui.projectSearch.toLowerCase()) {
-    const list = [...state.projects]
-      .sort((a, b) => b.updated - a.updated)
-      .filter(p => !q || [p.title, p.question, p.course, p.description].join(' ').toLowerCase().includes(q));
+  function renderProjectGrid() {
+    const q = ui.projectSearch.toLowerCase();
+    const list = [...state.projects].sort((a, b) => b.updated - a.updated)
+      .filter(p => !q || [L(p.title), L(p.question), p.course, L(p.description)].join(' ').toLowerCase().includes(q));
     $('#projectGrid').innerHTML = list.map(p => projectCard(p, { deletable: true })).join('') +
-      (q ? '' : `<button class="new-card" data-action="open-new-project"><span class="empty-icon"><i data-lucide="plus"></i></span>Create a new project</button>`) +
-      (!list.length && q ? `<div class="empty" style="grid-column:1/-1"><h3>No projects match “${esc(q)}”</h3><p>Try a different keyword.</p></div>` : '');
+      (q ? '' : `<button class="new-card" data-action="open-new-project"><span class="empty-icon"><i data-lucide="plus"></i></span>${t('proj.createCard')}</button>`) +
+      (!list.length && q ? `<div class="empty" style="grid-column:1/-1"><h3>${esc(t('proj.noMatch', { q }))}</h3><p>${t('proj.tryOther')}</p></div>` : '');
     icons();
   }
 
   /* ---------- Evidence Library ---------- */
   function renderEvidence() {
     const p = currentProject();
-    const evidence = projectEvidence();
-    const counts = {};
-    evidence.forEach(e => { counts[e.sourceId] = (counts[e.sourceId] || 0) + 1; });
-
-    const sourceItems = p.sources.map(s => `
-      <button class="source-item ${ui.lib.source === s.id ? 'active' : ''}" data-action="filter-source" data-id="${s.id}" title="${esc(s.file)}">
-        <span class="file-icon">PDF</span>
-        <span class="source-text">
-          <strong>${esc(s.title)}</strong>
-          <small>${esc(s.short || s.file)}${s.pages ? ` · ${s.pages} pp` : ''}${s.size ? ` · ${s.size}` : ''}</small>
-        </span>
-        <span class="count-pill">${counts[s.id] || 0}</span>
-      </button>`).join('');
+    const themes = mapFor(p.id).themes;
+    if (ui.lib.theme !== 'all' && !themes.some(x => x.id === ui.lib.theme)) ui.lib.theme = 'all';
 
     $('#page-evidence').innerHTML = `
       <div class="page-header">
-        <div>
-          <h1>Evidence Library</h1>
-          <p>Ask questions across your sources and keep the evidence that matters. Every card links back to its source document and page.</p>
+        <div><h1>${t('nav.evidence')}</h1><p>${t('lib.sub')}</p></div>
+        <div class="actions">
+          <button class="btn btn-outline" data-action="open-refs"><i data-lucide="book-marked"></i>${t('lib.refList')}</button>
+          <button class="btn btn-outline" data-action="upload-source"><i data-lucide="file-up"></i>${t('lib.addPdf')}</button>
         </div>
-        <div class="actions"><button class="btn btn-outline" data-action="upload-source"><i data-lucide="file-up"></i>Add PDF</button></div>
       </div>
 
-      ${!hasRealEvidence(p.id) ? `<div class="notice"><i data-lucide="info"></i><span>Evidence extraction is simulated in this prototype. Sources for <strong>${esc(p.title)}</strong> are listed, but full sample evidence is only available in the demo project. <button class="link-btn" data-action="open-project" data-id="${DEMO_PROJECT}">Open demo project</button></span></div>` : ''}
+      <div class="notice"><i data-lucide="scan-text"></i><span>${t('lib.realNotice')}</span></div>
 
       <div class="library-grid">
         <aside class="panel sources-panel">
-          <div class="panel-head"><h3>Source documents</h3><span class="count-pill">${p.sources.length}</span></div>
-          <div class="source-list">
-            <button class="source-item ${ui.lib.source === 'all' ? 'active' : ''}" data-action="filter-source" data-id="all">
-              <span class="file-icon all"><i data-lucide="layers"></i></span>
-              <span class="source-text"><strong>All sources</strong><small>Search across every document</small></span>
-              <span class="count-pill">${evidence.length}</span>
-            </button>
-            ${sourceItems}
-          </div>
-          <div class="upload-row"><button class="upload-btn" data-action="upload-source"><i data-lucide="upload"></i>Upload PDF sources</button></div>
+          <div class="panel-head"><h3>${t('lib.sources')}</h3><span class="count-pill">${p.sources.length}</span></div>
+          <div class="source-list" id="sourceList">${sourceListHTML(p)}</div>
+          <div class="upload-row"><button class="upload-btn" data-action="upload-source"><i data-lucide="upload"></i>${t('lib.upload')}</button></div>
         </aside>
 
         <div class="library-main">
           <section class="panel ask-card">
-            <div class="ask-title"><i data-lucide="sparkles"></i><h2>Ask your sources</h2></div>
-            <p class="sub">Answers are generated only from your uploaded documents and always cite the original excerpts.</p>
+            <div class="ask-title"><i data-lucide="message-square-text"></i><h2>${t('lib.ask')}</h2></div>
+            <p class="sub">${t('lib.askSub')}</p>
             <form class="ask-form" id="askForm">
-              <textarea id="askInput" rows="1" placeholder="e.g. How does night-time phone use affect mood?" aria-label="Research question"></textarea>
-              <button class="btn btn-primary" type="submit" ${ui.asking ? 'disabled' : ''}><i data-lucide="arrow-up"></i>Ask</button>
+              <textarea id="askInput" rows="1" placeholder="${t('lib.askPh')}" aria-label="${t('lib.ask')}"></textarea>
+              <button class="btn btn-primary" type="submit" ${ui.asking ? 'disabled' : ''}><i data-lucide="arrow-up"></i>${t('lib.askBtn')}</button>
             </form>
-            <div class="suggestions">
-              <span>Try:</span>
-              ${SUGGESTED_QUESTIONS.map(q => `<button class="chip" data-action="ask-suggestion" data-q="${esc(q)}">${esc(q)}</button>`).join('')}
-            </div>
           </section>
 
           <div id="answerArea"></div>
@@ -667,15 +1239,15 @@
           <section class="lib-toolbar">
             <div class="lib-toolbar-row">
               <div class="tabs" role="tablist">
-                <button class="tab ${ui.lib.tab === 'all' ? 'active' : ''}" data-action="set-tab" data-tab="all">All evidence <span class="count-pill" id="countAll">${evidence.length}</span></button>
-                <button class="tab ${ui.lib.tab === 'saved' ? 'active' : ''}" data-action="set-tab" data-tab="saved">Saved <span class="count-pill" id="countSaved">${savedList().length}</span></button>
+                <button class="tab ${ui.lib.tab === 'all' ? 'active' : ''}" data-action="set-tab" data-tab="all">${t('lib.results')} <span class="count-pill" id="countAll">${passageTotal(p)}</span></button>
+                <button class="tab ${ui.lib.tab === 'saved' ? 'active' : ''}" data-action="set-tab" data-tab="saved">${t('lib.saved')} <span class="count-pill" id="countSaved">${savedList().length}</span></button>
               </div>
-              <label class="search-input"><i data-lucide="search"></i><input id="libSearch" type="search" placeholder="Search evidence, excerpts, sources…" value="${esc(ui.lib.query)}" /></label>
+              <label class="search-input"><i data-lucide="search"></i><input id="libSearch" type="search" placeholder="${t('lib.searchPh')}" value="${esc(ui.lib.query)}" /></label>
             </div>
-            <div class="lib-toolbar-row">
-              <button class="chip ${ui.lib.theme === 'all' ? 'active' : ''}" data-action="set-theme" data-theme="all">All themes</button>
-              ${Object.values(THEMES).map(t => `<button class="chip ${ui.lib.theme === t.id ? 'active' : ''}" data-action="set-theme" data-theme="${t.id}"><span class="dot" style="--c:${t.color}"></span>${t.name}</button>`).join('')}
-            </div>
+            ${themes.length ? `<div class="lib-toolbar-row">
+              <button class="chip ${ui.lib.theme === 'all' ? 'active' : ''}" data-action="set-theme" data-theme="all">${t('lib.allThemes')}</button>
+              ${themes.map(x => `<button class="chip ${ui.lib.theme === x.id ? 'active' : ''}" data-action="set-theme" data-theme="${x.id}"><span class="dot" style="--c:${x.color}"></span>${esc(x.name)}</button>`).join('')}
+            </div>` : ''}
           </section>
 
           <div>
@@ -689,43 +1261,43 @@
     renderEvidenceList();
   }
 
+  /* Saved evidence (optionally filtered), or live search results across the PDFs' text */
   function filteredEvidence() {
     const q = ui.lib.query.trim().toLowerCase();
-    return projectEvidence().filter(e => {
-      if (ui.lib.tab === 'saved' && !isSaved(e.id)) return false;
-      if (ui.lib.theme !== 'all' && !e.themes.includes(ui.lib.theme)) return false;
-      if (ui.lib.source !== 'all' && e.sourceId !== ui.lib.source) return false;
-      if (q) {
-        const src = sourceOf(e);
-        const hay = [e.title, e.extracted, e.excerpt, src.file, src.title, src.short, e.themes.map(t => THEMES[t].name).join(' ')].join(' ').toLowerCase();
-        return q.split(/\s+/).every(term => hay.includes(term));
-      }
-      return true;
-    });
+    const bySource = (e) => ui.lib.source === 'all' || e.sourceId === ui.lib.source;
+    const byTheme = (e) => ui.lib.theme === 'all' || (themeOf(e) || {}).id === ui.lib.theme;
+    if (ui.lib.tab === 'saved' || !q || ui.lib.theme !== 'all') {
+      return projectEvidence().filter(bySource).filter(byTheme)
+        .filter(e => !q || (e.excerpt + ' ' + e.title).toLowerCase().includes(q));
+    }
+    return searchPassages(ui.lib.query, 25, ui.lib.source);
   }
 
   function renderEvidenceList() {
-    const list = filteredEvidence();
     const container = $('#evidenceList');
     if (!container) return;
+    const list = filteredEvidence();
     const p = currentProject();
-    const activeFilters = [];
-    if (ui.lib.source !== 'all') { const s = p.sources.find(x => x.id === ui.lib.source); if (s) activeFilters.push(s.short || s.title); }
-    if (ui.lib.theme !== 'all') activeFilters.push(THEMES[ui.lib.theme].name);
-    if (ui.lib.query) activeFilters.push(`“${ui.lib.query}”`);
+    const active = [];
+    if (ui.lib.source !== 'all') { const s = p.sources.find(x => x.id === ui.lib.source); if (s) active.push(s.title); }
+    if (ui.lib.theme !== 'all') { const th = mapFor(p.id).themes.find(x => x.id === ui.lib.theme); if (th) active.push(th.name); }
+    if (ui.lib.query) active.push(`“${ui.lib.query}”`);
 
-    $('#resultMeta').innerHTML = `Showing ${list.length} evidence card${list.length === 1 ? '' : 's'}${activeFilters.length ? ' · ' + esc(activeFilters.join(' · ')) + ` · <button class="link-btn" data-action="clear-filters">Clear filters</button>` : ''}`;
+    $('#resultMeta').innerHTML = (list.length === 1 ? t('lib.showing1') : t('lib.showing', { n: list.length })) +
+      (active.length ? ' · ' + esc(active.join(' · ')) + ` · <button class="link-btn" data-action="clear-filters">${t('common.clearFilters')}</button>` : '');
 
     if (!list.length) {
-      const savedEmpty = ui.lib.tab === 'saved' && !savedList().length;
+      const readable = p.sources.some(s => s.status === 'ready');
+      const reading = p.sources.some(s => s.status === 'reading');
+      const key = !readable && !reading ? 'lib.noTextT' : ui.lib.tab === 'saved' && !ui.lib.query ? 'lib.noneSaved' : ui.lib.query || ui.lib.theme !== 'all' ? 'lib.noMatch' : 'lib.startT';
+      const sub = { 'lib.noTextT': 'lib.noTextS', 'lib.noneSaved': 'lib.noneSavedSub', 'lib.noMatch': 'lib.noMatchSub', 'lib.startT': 'lib.startS' }[key];
       container.innerHTML = `
         <div class="empty">
-          <div class="empty-icon"><i data-lucide="${savedEmpty ? 'bookmark' : 'search-x'}"></i></div>
-          <h3>${!hasRealEvidence(p.id) ? 'No evidence extracted yet' : savedEmpty ? 'No saved evidence yet' : 'No matching evidence'}</h3>
-          <p>${!hasRealEvidence(p.id)
-            ? 'In the full product, evidence would be extracted from your PDFs automatically. Try the demo project to explore the workflow.'
-            : savedEmpty ? 'Save evidence cards from your search results or AI answers to build your library.' : 'Try another keyword, or clear the theme and source filters.'}</p>
-          ${hasRealEvidence(p.id) ? '<button class="btn btn-outline btn-sm" data-action="clear-filters">Clear filters</button>' : `<button class="btn btn-soft btn-sm" data-action="open-project" data-id="${DEMO_PROJECT}">Open demo project</button>`}
+          <div class="empty-icon"><i data-lucide="${key === 'lib.noTextT' ? 'file-up' : key === 'lib.noneSaved' ? 'bookmark' : 'search'}"></i></div>
+          <h3>${t(key)}</h3>
+          <p>${t(sub)}${key === 'lib.noMatch' && isVietnamese(ui.lib.query) && !docLooksVietnamese(p) ? ' ' + t('ans.tipEn') : ''}</p>
+          ${key === 'lib.noTextT' ? `<button class="btn btn-primary btn-sm" data-action="upload-source"><i data-lucide="file-up"></i>${t('lib.addPdf')}</button>` : ''}
+          ${key === 'lib.noMatch' ? `<button class="btn btn-outline btn-sm" data-action="clear-filters">${t('common.clearFilters')}</button>` : ''}
         </div>`;
     } else {
       container.innerHTML = list.map(e => evidenceCard(e, { query: ui.lib.query })).join('');
@@ -738,29 +1310,34 @@
     const area = $('#answerArea');
     if (!area) return;
     if (ui.asking) {
-      area.innerHTML = `<div class="panel thinking"><span class="bars"><span></span><span></span><span></span></span>Reading ${currentProject().sources.length} sources and tracing relevant passages…</div>`;
+      area.innerHTML = `<div class="panel thinking"><span class="bars"><span></span><span></span><span></span></span>${t('lib.thinking', { n: currentProject().sources.length })}</div>`;
       return;
     }
     if (!ui.answer) { area.innerHTML = ''; return; }
     const a = ui.answer;
     let n = 0;
     const map = {};
-    const body = a.text.replace(/\{(e\d+)\}/g, (_, id) => {
+    const body = L(a.text).replace(/\{([eu]\w+)\}/g, (_, id) => {
       if (!map[id]) map[id] = ++n;
-      return `<sup><a data-action="jump-card" data-id="${id}" title="Jump to evidence">${map[id]}</a></sup>`;
+      const ev = evidenceById(id);
+      return `<sup><a data-action="jump-card" data-id="${id}" title="${ev ? esc(shortCite(ev)) : ''}">${map[id]}</a></sup>`;
     });
+    const pdf = a.mode === 'pdf';
     area.innerHTML = `
       <section class="panel answer-card">
         <div class="answer-head">
-          <span class="label-ai"><i data-lucide="sparkles"></i>AI-generated synthesis · simulated</span>
-          <button class="icon-btn sm" data-action="clear-answer" aria-label="Dismiss answer"><i data-lucide="x"></i></button>
+          <span class="label-ai"><i data-lucide="file-search"></i>${t('lib.pdfAnswer')}</span>
+          <button class="icon-btn sm" data-action="clear-answer" aria-label="${t('lib.dismiss')}"><i data-lucide="x"></i></button>
         </div>
         <div class="answer-q"><i data-lucide="message-square"></i>${esc(a.question)}</div>
+        ${a.translatedQ ? `<p class="answer-meta"><i data-lucide="languages"></i>${esc(t('lib.searchedAs', { q: a.translatedQ }))}</p>` : ''}
+        ${a.intro ? `<p class="answer-intro">${esc(L(a.intro))}</p>` : ''}
         <div class="answer-body">${body}</div>
-        <p class="answer-disclaimer"><i data-lucide="shield-check"></i>Generated from your sources — always verify against the original excerpts below.</p>
+        ${a.tip ? `<p class="answer-meta tip"><i data-lucide="lightbulb"></i>${esc(L(a.tip))}</p>` : ''}
+        <p class="answer-disclaimer"><i data-lucide="shield-check"></i>${t('lib.pdfNote')}${a.machineTranslated && state.lang === 'vi' ? ' ' + t('lib.translatedNote') : ''}</p>
         ${a.evidence.length ? `
           <div class="answer-refs">
-            <h4>Supporting evidence (${a.evidence.length})</h4>
+            <h4>${t('lib.supporting', { n: a.evidence.length })}</h4>
             <div class="evidence-list">${a.evidence.map(id => evidenceCard(evidenceById(id))).join('')}</div>
           </div>` : ''}
       </section>`;
@@ -774,113 +1351,836 @@
     ui.answer = null;
     renderAnswer();
     const btn = $('#askForm button'); if (btn) btn.disabled = true;
-
-    setTimeout(() => {
-      ui.asking = false;
-      ui.answer = buildAnswer(question);
-      logActivity('message-square', `Asked "${question.length > 60 ? question.slice(0, 57) + '…' : question}"`);
-      touchProject();
-      commit();
-      renderAnswer();
-      const b = $('#askForm button'); if (b) b.disabled = false;
-      $('#answerArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 900);
+    const started = Date.now();
+    const work = answerFromPdfs(question);
+    work.catch(err => { console.warn(err); return { question, mode: 'pdf', text: pair('ans.noPassage'), evidence: [] }; })
+      .then(answer => new Promise(res => setTimeout(() => res(answer), Math.max(0, 500 - (Date.now() - started)))))
+      .then(answer => {
+        ui.asking = false;
+        ui.answer = answer;
+        logActivity('message-square', 'act.asked', { q: truncate(question) });
+        touchProject();
+        commit();
+        renderAnswer();
+        const b = $('#askForm button'); if (b) b.disabled = false;
+        const area = $('#answerArea'); if (area) area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
   }
 
-  function buildAnswer(question) {
-    const p = currentProject();
-    if (!hasRealEvidence(p.id)) {
-      return { question, text: `I couldn't find extracted evidence for <strong>${esc(p.title)}</strong> yet. In this prototype, AI answers are demonstrated with the sample project "Social Media Use and Adolescent Mental Health".`, evidence: [] };
-    }
-    const hit = MOCK_ANSWERS.find(m => m.match.test(question));
-    if (hit) return { question, text: hit.text, evidence: hit.evidence };
-
-    // Fallback: keyword scoring across evidence
-    const terms = question.toLowerCase().split(/\W+/).filter(t => t.length > 3);
-    const scored = projectEvidence().map(e => {
-      const hay = (e.title + ' ' + e.extracted + ' ' + e.excerpt).toLowerCase();
-      return { e, score: terms.reduce((s, t) => s + (hay.includes(t) ? 1 : 0), 0) };
-    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 3);
-
-    if (!scored.length) {
-      return { question, text: 'I couldn’t find passages in your sources that clearly address this question. Try rephrasing it, or ask about a specific mechanism such as sleep, social comparison or online support.', evidence: [] };
-    }
-    const refs = scored.map(x => `{${x.e.id}}`).join(' ');
-    return {
-      question,
-      text: `Your sources contain ${scored.length} passage${scored.length > 1 ? 's' : ''} related to this question ${refs}. The most relevant findings are listed below — review each original excerpt to judge how directly it answers your question before using it in your argument.`,
-      evidence: scored.map(x => x.e.id)
-    };
-  }
 
   function toggleSave(id) {
     const list = savedList();
     const ev = evidenceById(id);
     const i = list.indexOf(id);
+    const pid = currentProject().id;
+    if (ev.user) {   // real PDF passages are stored with the project so they survive reloads
+      const store = (state.userEvidence[pid] ||= {});
+      if (i >= 0) delete store[id];
+      else store[id] = { id: ev.id, projectId: pid, sourceId: ev.sourceId, page: ev.page, themes: [], title: ev.title, extracted: null, excerpt: ev.excerpt, terms: ev.terms || [], user: true };
+    }
     if (i >= 0) {
       list.splice(i, 1);
-      toast('Evidence removed from your library', { icon: 'bookmark-minus' });
-      logActivity('bookmark-minus', `Removed evidence "${ev.title}"`);
+      toast(t('ev.removedToast'), { icon: 'bookmark-minus' });
+      logActivity('bookmark-minus', 'act.removed', { t: ev.title });
     } else {
       list.push(id);
-      toast('Evidence saved to your library', { icon: 'bookmark-check' });
-      logActivity('bookmark-plus', `Saved evidence "${ev.title}"`);
+      toast(t('ev.savedToast'), { icon: 'bookmark-check' });
+      logActivity('bookmark-plus', 'act.saved', { t: ev.title });
     }
     touchProject();
     commit();
   }
 
-  /* ---------- Insight Map ---------- */
-  function mapEdges() {
+  /* ======================================================
+     REAL DOCUMENT READING: everything runs in the browser
+     • PDF.js extracts the text layer page by page
+     • Tesseract.js OCRs pages that are only images (scans)
+     • MiniSearch ranks passages for search and questions
+     • Chrome's on-device Translator API (when available)
+       bridges Vietnamese questions and English documents
+     ====================================================== */
+  const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const OCR_MAX_PAGES = 40;
+  const PASSAGES = new Map();            // sourceId → { sourceId, passages: [{ i, page, text }] }
+  let indexCache = { key: '', index: null };
+  let readQueue = Promise.resolve();
+
+  const VI_CHARS = /[ăâđêôơưạảãàáẹẻẽèéịỉĩìíọỏõòóụủũùúỵỷỹỳýấầẩẫậắằẳẵặếềểễệốồổỗộớờởỡợứừửữự]/i;
+  const isVietnamese = (s) => VI_CHARS.test(s || '');
+  const STOP = new Set(('the a an and or of to in on for with by is are was were be been being how what why when where who whom which does do did that this these those it its as at from about into than then there their they them can could would should may might has have had not no vs ' +
+    'và của là có các những như thế nào gì sao tại về này đó một được không cho với trong đến thì mà hay hoặc ra lên khi đã đang sẽ bị nó họ ở ảnh hưởng nhau rằng vậy nhé hả ạ bạn tôi mình').split(/\s+/));
+  const queryTerms = (q) => [...new Set((q || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(x => x.length > 2 && !STOP.has(x)))];
+  const pair = (key, params = {}) => {
+    const fill = (s) => s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
+    return { en: fill(STR[key][0]), vi: fill(STR[key][1]) };
+  };
+  const isUserProject = (p = currentProject()) => !!p;
+  const passageTotal = (p = currentProject()) => (p ? p.sources.reduce((n, s) => n + (s.status === 'ready' ? (s.passageCount || 0) : 0), 0) : 0);
+  const themeColor = (e) => { const th = themeOf(e); return th ? th.color : 'var(--border-strong)'; };
+
+  /* Tiny IndexedDB wrapper: extracted text is too large for localStorage */
+  const idb = (() => {
+    let dbp = null;
+    const open = () => dbp || (dbp = new Promise((res, rej) => {
+      const r = indexedDB.open('traceThink', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('passages', { keyPath: 'sourceId' });
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }));
+    const run = async (mode, fn) => {
+      const db = await open();
+      return new Promise((res, rej) => {
+        const tx = db.transaction('passages', mode);
+        const req = fn(tx.objectStore('passages'));
+        tx.oncomplete = () => res(req && req.result);
+        tx.onerror = () => rej(tx.error);
+      });
+    };
+    return {
+      put: (rec) => run('readwrite', s => s.put(rec)),
+      del: (id) => run('readwrite', s => s.delete(id)),
+      all: () => run('readonly', s => s.getAll()),
+      clear: () => run('readwrite', s => s.clear())
+    };
+  })();
+
+  function loadScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = res; s.onerror = () => rej(new Error('Failed to load ' + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  /* Normalise a page's text and split it into ~350–600 character passages */
+  function chunkPage(raw) {
+    const text = raw.replace(/-\n(?=\p{Ll})/gu, '').replace(/\s*\n\s*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    if (text.replace(/\s/g, '').length < 30) return [];
+    const sentences = text.match(/[^.!?。]+[.!?。]+["”’)\]]*|[^.!?。]+$/g) || [text];
+    const out = [];
+    let buf = '';
+    for (const s of sentences) {
+      const sent = s.trim();
+      if (!sent) continue;
+      if (buf && buf.length + sent.length > 600) { out.push(buf); buf = ''; }
+      buf += (buf ? ' ' : '') + sent;
+      if (buf.length >= 350) { out.push(buf); buf = ''; }
+    }
+    if (buf) { if (out.length && buf.length < 120) out[out.length - 1] += ' ' + buf; else out.push(buf); }
+    // Hard-split very long runs (e.g. tables without punctuation)
+    return out.flatMap(p => {
+      if (p.length <= 900) return [p];
+      const parts = []; let rest = p;
+      while (rest.length > 700) { const cut = rest.lastIndexOf(' ', 600); parts.push(rest.slice(0, cut > 200 ? cut : 600)); rest = rest.slice(cut > 200 ? cut + 1 : 600); }
+      parts.push(rest);
+      return parts;
+    }).filter(p => p.length >= 50);
+  }
+  const splitSentences = (text) => (text.match(/[^.!?。]+[.!?。]+["”’)\]]*|[^.!?。]+$/g) || [text]).map(s => s.trim()).filter(Boolean);
+
+  function queueRead(pid, src, file) {
+    src.status = 'reading'; src.progress = 0;
+    readQueue = readQueue.then(() => readPdf(pid, src, file)).catch(err => console.warn(err));
+  }
+
+  async function readPdf(pid, src, file) {
+    src.status = 'reading'; src.progress = 0; src.ocr = false;
+    persist(); updateSourcesUI();
+    let ocrUsed = 0;
+    try {
+      if (!window.pdfjsLib) throw new Error('PDF.js did not load');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      src.pages = pdf.numPages;
+      try {
+        const meta = await pdf.getMetadata();
+        const title = meta && meta.info && meta.info.Title;
+        if (title && title.trim().length > 4 && !/^(untitled|microsoft word|document\d*|slide \d+)/i.test(title.trim())) src.title = title.trim();
+        const authors = parseAuthorField(meta && meta.info && meta.info.Author);
+        if (authors.length && !hasMeta(src)) src.authors = authors;
+      } catch (e) { /* metadata is optional */ }
+      let foundDoi = null;
+
+      const passages = [];
+      const scanned = [];
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const content = await page.getTextContent();
+        const text = content.items.map(it => it.str + (it.hasEOL ? '\n' : ' ')).join('');
+        if (n <= 2 && !foundDoi) foundDoi = findDoi(text);
+        const chunks = chunkPage(text);
+        if (chunks.length) chunks.forEach(c => passages.push({ i: passages.length, page: n, text: c }));
+        else scanned.push(n);
+        src.progress = Math.round(n / pdf.numPages * (scanned.length ? 50 : 100));
+        if (n % 2 === 0 || n === pdf.numPages) updateSourcesUI();
+      }
+
+      // Pages with no text layer are images: recognise them with OCR
+      if (scanned.length) {
+        const toOcr = scanned.slice(0, OCR_MAX_PAGES);
+        src.ocr = true; updateSourcesUI();
+        if (!window.Tesseract) await loadScript(TESSERACT_URL);
+        const worker = await window.Tesseract.createWorker(['eng', 'vie']);
+        for (let k = 0; k < toOcr.length; k++) {
+          const page = await pdf.getPage(toOcr[k]);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+          const { data } = await worker.recognize(canvas);
+          chunkPage(data.text || '').forEach(c => passages.push({ i: passages.length, page: toOcr[k], text: c }));
+          ocrUsed++;
+          src.progress = 50 + Math.round((k + 1) / toOcr.length * 50);
+          updateSourcesUI();
+        }
+        await worker.terminate();
+        if (scanned.length > OCR_MAX_PAGES) toast(t('src.ocrLimit', { n: OCR_MAX_PAGES }), { icon: 'info', type: 'warn' });
+        passages.sort((a, b) => a.page - b.page).forEach((p, i) => { p.i = i; });
+      }
+
+      const rec = { sourceId: src.id, passages };
+      PASSAGES.set(src.id, rec);
+      try { await idb.put(rec); } catch (e) { /* storage full or blocked, keep in memory */ }
+      src.passageCount = passages.length;
+      src.ocrPages = ocrUsed;
+      src.status = passages.length ? 'ready' : 'no-text';
+      if (!foundDoi && passages.length) foundDoi = findDoi(passages.slice(0, 6).map(x => x.text).join(' '));
+      if (foundDoi && !src.doiChecked) {
+        src.doiChecked = true;
+        const ok = await applyDoi(src, foundDoi);
+        if (ok) toast(t('src.doiFound', { f: src.file }), { icon: 'badge-check' });
+      }
+      if (passages.length) toast(t(ocrUsed ? 'src.doneOcr' : 'src.done', { f: src.file, n: passages.length }), { icon: 'file-check' });
+      else toast(t('src.failed', { f: src.file }), { icon: 'triangle-alert', type: 'warn' });
+    } catch (err) {
+      console.warn('PDF read failed', err);
+      src.status = 'error';
+      toast(t('src.failed', { f: src.file }), { icon: 'triangle-alert', type: 'warn' });
+    }
+    delete src.progress; delete src.ocr;
+    indexCache.key = '';
+    touchProject(pid);
+    persist();
+    updateSourcesUI();
+    if (currentPage() === 'evidence' && currentProject() && currentProject().id === pid) renderEvidenceList();
+  }
+
+  /* ---------- Reference details: PDF metadata, DOI → CrossRef, manual editing ---------- */
+  const DOI_RE = /\b(10\.\d{4,9}\/[^\s"<>]+)/i;
+  function findDoi(text) {
+    const m = (text || '').match(DOI_RE);
+    return m ? m[1].replace(/[).,;:\]]+$/, '') : null;
+  }
+
+  /* "Hartley, James; Chen, Lin" · "James Hartley and Lin Chen" · "J. Hartley, L. Chen" → [{ family, given }] */
+  function parseAuthorField(raw) {
+    if (!raw || typeof raw !== 'string') return [];
+    const value = raw.trim();
+    if (!value || /microsoft|adobe|acrobat|admin|user|owner|^\d+$|@/i.test(value) || value.length > 200) return [];
+    const parts = value.includes(';') ? value.split(';') : value.split(/,\s*(?=\S+\s+\S)| and | & /);
+    return parts.map(p => p.trim()).filter(p => /\p{L}/u.test(p) && p.length < 60).map(p => {
+      if (p.includes(',')) { const [family, given] = p.split(',').map(x => x.trim()); return { family, given: given || '' }; }
+      const words = p.split(/\s+/);
+      return words.length === 1 ? { family: words[0], given: '' } : { family: words[words.length - 1], given: words.slice(0, -1).join(' ') };
+    });
+  }
+
+  /* CrossRef's public REST API returns publication metadata for a DOI (no key needed, CORS enabled) */
+  async function lookupDoi(doi) {
+    const res = await withTimeout(fetch('https://api.crossref.org/works/' + encodeURIComponent(doi)), 8000);
+    if (!res.ok) throw new Error('DOI not found');
+    const m = (await res.json()).message;
+    const dateParts = (m.issued || m['published-print'] || m['published-online'] || {})['date-parts'];
+    const journal = stripTags((m['container-title'] || [])[0] || '');
+    const kind = m.type || '';
+    return {
+      doi: m.DOI,
+      title: stripTags((m.title || [])[0] || '').replace(/\s+/g, ' ').trim(),
+      year: dateParts && dateParts[0] && dateParts[0][0] ? String(dateParts[0][0]) : '',
+      authors: (m.author || []).filter(a => a.family || a.name).map(a => ({ family: a.family || a.name, given: a.given || '' })),
+      journal,
+      jAbbr: stripTags((m['short-container-title'] || [])[0] || ''),
+      volume: m.volume || '',
+      issue: m.issue || '',
+      range: (m.page || '').replace('-', '–'),
+      publisher: m.publisher || '',
+      type: journal && /article|chapter|posted|proceedings/.test(kind) ? 'article' : kind === 'report' ? 'report' : 'book'
+    };
+  }
+
+  async function applyDoi(src, doi) {
+    try {
+      const meta = await lookupDoi(doi);
+      Object.assign(src, {
+        doi: meta.doi, type: meta.type, year: meta.year || src.year,
+        title: meta.title || src.title, journal: meta.journal, jAbbr: meta.jAbbr,
+        volume: meta.volume, issue: meta.issue, range: meta.range, publisher: meta.publisher
+      });
+      if (meta.authors.length) { src.authors = meta.authors; delete src.org; }
+      persist();
+      return true;
+    } catch (e) {
+      src.doi = src.doi || doi;   // keep the DOI even if CrossRef had no record
+      return false;
+    }
+  }
+
+  /* Edit-details modal, built on demand */
+  function openSourceEditor(sourceId) {
+    const p = currentProject();
+    const src = p && p.sources.find(s => s.id === sourceId);
+    if (!src) return;
+    ui.editingSource = sourceId;
+    let modal = $('#srcModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-backdrop';
+      modal.id = 'srcModal';
+      modal.addEventListener('mousedown', (e) => { if (e.target === modal) closeSourceEditor(); });
+      document.body.appendChild(modal);
+    }
+    const type = src.type || (src.journal ? 'article' : 'book');
+    const authorsText = (src.authors || []).map(a => a.given ? `${a.family}, ${a.given}` : a.family).join('\n');
+    modal.innerHTML = `
+      <div class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="srcTitle">
+        <header class="modal-head">
+          <div><h2 id="srcTitle">${t('src.editTitle')}</h2><p>${esc(src.file)}</p></div>
+          <button class="icon-btn" data-action="close-src" aria-label="${t('common.close')}"><i data-lucide="x"></i></button>
+        </header>
+        <form class="modal-body" id="srcForm" novalidate>
+          <div class="field">
+            <label for="sfDoi">DOI</label>
+            <div class="doi-row">
+              <input id="sfDoi" name="doi" value="${esc(src.doi || '')}" placeholder="10.1234/abcd.5678" />
+              <button type="button" class="btn btn-outline" data-action="lookup-doi"><i data-lucide="search"></i>${t('src.lookup')}</button>
+            </div>
+            <small class="hint">${t('src.doiHint')}</small>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="sfType">${t('src.type')}</label>
+              <select id="sfType" name="type">
+                <option value="article" ${type === 'article' ? 'selected' : ''}>${t('src.tArticle')}</option>
+                <option value="book" ${type === 'book' ? 'selected' : ''}>${t('src.tBook')}</option>
+                <option value="report" ${type === 'report' ? 'selected' : ''}>${t('src.tReport')}</option>
+              </select></div>
+            <div class="field"><label for="sfYear">${t('src.year')}</label><input id="sfYear" name="year" value="${esc(src.year || '')}" placeholder="2024" inputmode="numeric" /></div>
+          </div>
+          <div class="field"><label for="sfAuthors">${t('src.authors')}</label>
+            <textarea id="sfAuthors" name="authors" rows="3" placeholder="Nguyen, Minh Anh&#10;Smith, John">${esc(authorsText)}</textarea>
+            <small class="hint">${t('src.authorsHint')}</small></div>
+          <div class="field"><label for="sfOrg">${t('src.org')}</label><input id="sfOrg" name="org" value="${esc(src.org || '')}" placeholder="UNESCO" /></div>
+          <div class="field"><label for="sfTitle">${t('src.titleF')}</label><input id="sfTitle" name="title" value="${esc(src.title || '')}" /></div>
+          <div class="field article-only"><label for="sfJournal">${t('src.journal')}</label><input id="sfJournal" name="journal" value="${esc(src.journal || '')}" /></div>
+          <div class="field-row article-only three">
+            <div class="field"><label for="sfVol">${t('src.volume')}</label><input id="sfVol" name="volume" value="${esc(src.volume || '')}" /></div>
+            <div class="field"><label for="sfIss">${t('src.issue')}</label><input id="sfIss" name="issue" value="${esc(src.issue || '')}" /></div>
+            <div class="field"><label for="sfPages">${t('src.pagesF')}</label><input id="sfPages" name="range" value="${esc(src.range || '')}" placeholder="45–67" /></div>
+          </div>
+          <div class="field-row book-only">
+            <div class="field"><label for="sfPub">${t('src.publisher')}</label><input id="sfPub" name="publisher" value="${esc(src.publisher || '')}" /></div>
+            <div class="field"><label for="sfPlace">${t('src.place')}</label><input id="sfPlace" name="place" value="${esc(src.place || '')}" /></div>
+          </div>
+          <div class="src-preview" id="srcPreview"></div>
+        </form>
+        <footer class="modal-foot">
+          <button class="btn btn-ghost" type="button" data-action="close-src">${t('common.cancel')}</button>
+          <button class="btn btn-primary" type="submit" form="srcForm"><i data-lucide="check"></i>${t('src.save')}</button>
+        </footer>
+      </div>`;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    updateSourcePreview();
+    icons();
+  }
+  function closeSourceEditor() {
+    const m = $('#srcModal'); if (m) m.hidden = true;
+    document.body.style.overflow = '';
+    ui.editingSource = null;
+  }
+  /* Read the form into a plain source object (used for the live preview and for saving) */
+  function sourceFromForm() {
+    const f = $('#srcForm');
+    const d = Object.fromEntries(new FormData(f));
+    const authors = (d.authors || '').split('\n').map(x => x.trim()).filter(Boolean).map(line => {
+      if (line.includes(',')) { const [family, given] = line.split(',').map(x => x.trim()); return { family, given: given || '' }; }
+      const w = line.split(/\s+/); return w.length === 1 ? { family: w[0], given: '' } : { family: w[w.length - 1], given: w.slice(0, -1).join(' ') };
+    });
+    return {
+      type: d.type, year: (d.year || '').trim(), title: (d.title || '').trim(), authors,
+      org: authors.length ? '' : (d.org || '').trim(), journal: (d.journal || '').trim(),
+      volume: (d.volume || '').trim(), issue: (d.issue || '').trim(), range: (d.range || '').trim().replace(/\s*-\s*/, '–'),
+      publisher: (d.publisher || '').trim(), place: (d.place || '').trim(), doi: (d.doi || '').trim()
+    };
+  }
+  function updateSourcePreview() {
+    const f = $('#srcForm');
+    if (!f) return;
+    const draft = sourceFromForm();
+    f.classList.toggle('is-article', draft.type === 'article');
+    const style = state.user.citation;
+    const src = currentProject().sources.find(s => s.id === ui.editingSource);
+    const n = sourceNumber(src);
+    $('#srcPreview').innerHTML = `
+      <span class="label-src">${CITATION_STYLES[style].label}</span>
+      <p><span>${t('ref.inText')}:</span> <code>${inText(draft, 12, style, n, true)}</code></p>
+      <p class="src-preview-ref">${reference(draft, style, n)}</p>`;
+  }
+
+  /* Restore extracted text saved in IndexedDB from earlier visits */
+  async function loadStoredPassages() {
+    try { (await idb.all() || []).forEach(r => PASSAGES.set(r.sourceId, r)); } catch (e) { /* IndexedDB unavailable */ }
+    let changed = false;
+    state.projects.forEach(p => {
+      p.sources.forEach(s => {
+        const has = PASSAGES.has(s.id);
+        if (s.status === 'reading' || (s.status === 'ready' && !has) || !s.status) {
+          s.status = has ? 'ready' : 'missing';
+          if (has) s.passageCount = PASSAGES.get(s.id).passages.length;
+          changed = true;
+        }
+      });
+    });
+    if (changed) persist();
+    if (['evidence', 'dashboard'].includes(currentPage())) refresh();
+  }
+
+  function getIndex(p) {
+    if (!window.MiniSearch) return null;
+    const ready = p.sources.filter(s => s.status === 'ready' && PASSAGES.has(s.id));
+    const key = p.id + ':' + ready.map(s => s.id + s.passageCount).join(',');
+    if (indexCache.key === key) return indexCache.index;
+    const ms = new window.MiniSearch({
+      fields: ['text'],
+      storeFields: ['sourceId', 'page', 'text'],
+      processTerm: (term) => { const x = term.toLowerCase(); return x.length < 2 || STOP.has(x) ? null : x; },
+      searchOptions: { prefix: (term) => term.length > 3, fuzzy: (term) => (term.length > 5 ? 0.2 : false), combineWith: 'OR' }
+    });
+    ms.addAll(ready.flatMap(s => PASSAGES.get(s.id).passages.map(ps => ({ id: `u${s.id}_${ps.i}`, sourceId: s.id, page: ps.page, text: ps.text }))));
+    indexCache = { key, index: ms };
+    return ms;
+  }
+
+  function searchPassages(query, limit = 6, sourceFilter = 'all') {
+    const p = currentProject();
+    const ms = p && getIndex(p);
+    if (!ms || !query.trim()) return [];
+    let res = ms.search(query);
+    if (sourceFilter !== 'all') res = res.filter(r => r.sourceId === sourceFilter);
+    if (!res.length) return [];
+    const top = res[0].score;
+    return res.filter(r => r.score >= top * 0.3).slice(0, limit).map(r => toEvidence(p.id, r));
+  }
+
+  function toEvidence(pid, r) {
+    const first = splitSentences(r.text)[0] || r.text;
+    const title = first.length > 110 ? first.slice(0, 107).replace(/\s+\S*$/, '') + '…' : first;
+    const ev = { id: r.id, projectId: pid, sourceId: r.sourceId, page: r.page, themes: [], title, extracted: null, excerpt: r.text, terms: r.terms || [], user: true };
+    ui.resultCache[r.id] = ev;
+    return ev;
+  }
+
+  function docLooksVietnamese(p) {
+    const sample = p.sources.filter(s => PASSAGES.has(s.id)).flatMap(s => PASSAGES.get(s.id).passages.slice(0, 4).map(x => x.text)).join(' ');
+    if (!sample) return false;
+    const hits = (sample.match(new RegExp(VI_CHARS.source, 'gi')) || []).length;
+    return hits / sample.length > 0.01;
+  }
+
+  /* Chrome's built-in, on-device Translator API (Chrome 138+). Returns null when unavailable. */
+  const translators = {};
+  const translatorBroken = {};
+  const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+  async function translateText(text, from, to) {
+    const key = from + '>' + to;
+    if (!('Translator' in self) || translatorBroken[key] || translatorBroken.any) return null;
+    try {
+      if (!translators[key]) {
+        const availability = await withTimeout(self.Translator.availability({ sourceLanguage: from, targetLanguage: to }), 2500);
+        if (availability === 'unavailable') { translatorBroken[key] = true; return null; }
+        if (availability !== 'available') {
+          // Language pack not on this device yet: start the download in the background, answer without it for now
+          self.Translator.create({ sourceLanguage: from, targetLanguage: to }).then(tr => { translators[key] = tr; }).catch(() => {});
+          return null;
+        }
+        translators[key] = await withTimeout(self.Translator.create({ sourceLanguage: from, targetLanguage: to }), 5000);
+      }
+      return await withTimeout(translators[key].translate(text), 6000);
+    } catch (e) {
+      translatorBroken[key] = true;   // don't keep the student waiting on every question
+      if (e && e.message === 'timeout') translatorBroken.any = true;
+      return null;
+    }
+  }
+
+  /* Answer a question from the project's own PDFs: rank passages, then pick the most relevant sentences */
+  async function answerFromPdfs(question) {
+    const p = currentProject();
+    if (!p.sources.some(s => s.status === 'ready')) {
+      return { question, mode: 'pdf', text: pair('ans.noText'), evidence: [] };
+    }
+    const docVi = docLooksVietnamese(p);
+    const qVi = isVietnamese(question);
+    let searchQ = question;
+    let translatedQ = null;
+    if (qVi && !docVi) {
+      translatedQ = await translateText(question, 'vi', 'en');
+      if (translatedQ) searchQ = translatedQ + ' ' + question;
+    }
+    const found = searchPassages(searchQ, 6);
+    const tip = qVi && !docVi && !translatedQ ? pair('ans.tipEn') : null;
+    if (!found.length) return { question, translatedQ, mode: 'pdf', text: pair('ans.noPassage'), tip, evidence: [] };
+
+    const terms = queryTerms(searchQ);
+    const candidates = [];
+    found.forEach((ev, rank) => {
+      splitSentences(ev.excerpt).forEach(s => {
+        if (s.length < 40) return;
+        const low = s.toLowerCase();
+        const hits = terms.filter(x => low.includes(x)).length;
+        if (hits) candidates.push({ s, ev, rank, score: hits + (found.length - rank) * 0.25 });
+      });
+    });
+    candidates.sort((a, b) => b.score - a.score);
+    const picked = [];
+    for (const c of candidates) {
+      if (picked.length >= 4) break;
+      if (picked.some(x => x.s === c.s) || picked.filter(x => x.ev === c.ev).length >= 2) continue;
+      picked.push(c);
+    }
+    if (!picked.length) picked.push({ s: splitSentences(found[0].excerpt)[0], ev: found[0], rank: 0 });
+    picked.sort((a, b) => a.rank - b.rank);
+
+    const original = picked.map(c => `${esc(c.s)} {${c.ev.id}}`).join(' ');
+    let vi = null;
+    if (!docVi) {
+      const tr = await translateText(picked.map(c => c.s).join('\n'), 'en', 'vi');
+      const lines = tr ? tr.split('\n').filter(Boolean) : [];
+      if (lines.length === picked.length) vi = lines.map((l, i) => `${esc(l)} {${picked[i].ev.id}}`).join(' ');
+    }
+    const files = new Set(found.map(e => e.sourceId)).size;
+    return {
+      question, translatedQ, mode: 'pdf', tip,
+      intro: pair('ans.pdfIntro', { n: found.length, f: files }),
+      text: { en: original, vi: vi || original },
+      machineTranslated: !!vi,
+      evidence: found.map(e => e.id)
+    };
+  }
+
+  /* Source list (live-updated while files are being read) */
+  function sourceStatusLine(s) {
+    if (s.status === 'reading') return `<span class="src-status reading"><i data-lucide="loader-circle"></i>${t(s.ocr ? 'src.ocr' : 'src.reading', { n: s.progress || 0 })}</span>`;
+    if (s.status === 'no-text') return `<span class="src-status warn">${t('src.noText')}</span>`;
+    if (s.status === 'error') return `<span class="src-status warn">${t('src.error')}</span>`;
+    if (s.status === 'missing') return `<span class="src-status warn">${t('src.missing')}</span>`;
+    if (s.status === 'ready') return `${s.pages} pp · ${t('src.passages', { n: s.passageCount || 0 })}${s.ocrPages ? ' · OCR' : ''}${isComplete(s) ? '' : ` · <span class="src-status warn">${t('src.needsDetails')}</span>`}`;
+    return `${hasMeta(s) ? esc(inText(s, null, 'rmit-harvard').replace(/[()]/g, '')) : esc(s.file)}${s.pages ? ` · ${s.pages} pp` : ''}${s.size ? ` · ${s.size}` : ''}`;
+  }
+  function sourceListHTML(p) {
+    const user = isUserProject(p);
+    const counts = {};
+    if (user) p.sources.forEach(s => { counts[s.id] = s.status === 'ready' ? (s.passageCount || 0) : '–'; });
+    else projectEvidence(p.id).forEach(e => { counts[e.sourceId] = (counts[e.sourceId] || 0) + 1; });
+    const total = user ? passageTotal(p) : projectEvidence(p.id).length;
+    return `
+      <button class="source-item ${ui.lib.source === 'all' ? 'active' : ''}" data-action="filter-source" data-id="all">
+        <span class="file-icon all"><i data-lucide="layers"></i></span>
+        <span class="source-text"><strong>${t('lib.allSources')}</strong><small>${t('lib.allSourcesSub')}</small></span>
+        <span class="count-pill">${total}</span>
+      </button>
+      ${p.sources.map(s => `
+        <div class="source-row">
+          <button class="source-item ${ui.lib.source === s.id ? 'active' : ''}" data-action="filter-source" data-id="${s.id}" title="${esc(s.file)}">
+            <span class="file-icon">PDF</span>
+            <span class="source-text"><strong>${esc(s.title)}</strong><small>${sourceStatusLine(s)}</small>${hasMeta(s) ? `<small class="src-cite">${inText(s, null, 'rmit-harvard', 1, true)}</small>` : ''}</span>
+            <span class="count-pill">${counts[s.id] ?? 0}</span>
+          </button>
+          <button class="icon-btn sm source-edit ${isComplete(s) ? '' : 'needs'}" data-action="edit-source" data-id="${s.id}" title="${t('src.edit')}" aria-label="${t('src.edit')}"><i data-lucide="${isComplete(s) ? 'pencil' : 'circle-alert'}"></i></button>
+        </div>`).join('')}`;
+  }
+  function updateSourcesUI() {
+    if (currentPage() !== 'evidence' || !currentProject()) return;
+    const el = $('#sourceList');
+    if (el) { el.innerHTML = sourceListHTML(currentProject()); icons(); }
+    const all = $('#countAll');
+    if (all && isUserProject()) all.textContent = passageTotal();
+  }
+
+  /* ---------- Reference list modal ---------- */
+  function openRefs(sources) {
+    ui.refStyle = state.user.citation;
+    ui.refSources = sources || null;
+    renderRefs();
+    $('#refModal').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeRefs() { $('#refModal').hidden = true; document.body.style.overflow = ''; }
+  function refSources() {
+    const p = currentProject();
+    return ui.refSources ? ui.refSources.map(id => p.sources.find(s => s.id === id)).filter(Boolean) : p.sources;
+  }
+  function renderRefs() {
+    const style = ui.refStyle;
+    const list = referenceList(refSources(), style);
+    const first = refSources()[0];
+    $('#refSub').textContent = t('ref.sub', { p: L(currentProject().title), s: CITATION_STYLES[style].label });
+    $('#refBody').innerHTML = `
+      <div class="field">
+        <label for="refStyleSel">${t('ref.style')}</label>
+        <select id="refStyleSel">${Object.entries(CITATION_STYLES).map(([k, v]) => `<option value="${k}" ${k === style ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+      </div>
+      ${first ? `<p class="ref-intext"><span>${t('ref.inText')}:</span> <code>${esc(inText(first, 9, style, sourceNumber(first)))}</code></p>` : ''}
+      ${list.length ? `<ol class="ref-list ${NUMERIC_STYLES.includes(style) ? 'numeric' : ''}">
+        ${list.map(r => `<li>${r.html}${isComplete(r.src) ? '' : `<small class="ref-warn"><i data-lucide="circle-alert"></i>${t('ref.incomplete')} <button class="link-btn" data-action="edit-source" data-id="${r.src.id}">${t('src.addDetails')}</button></small>`}</li>`).join('')}
+      </ol>` : `<div class="empty" style="padding:24px"><p>${t('ref.empty')}</p></div>`}
+      <p class="ref-disclaimer"><i data-lucide="info"></i><span>${t('ref.disclaimer')}</span></p>`;
+    icons();
+  }
+
+  /* ---------- Insight Map (real, built from the student's saved evidence) ----------
+     • Themes: suggested by clustering TF-IDF vectors of the evidence text, then renamed/edited by the student
+     • "Similar" links: suggested from cosine similarity (shared key terms)
+     • "Different" / "Contradicts" links: created by the student, with a note explaining why
+     • Nodes can be dragged; positions are saved per project */
+  const THEME_PALETTE = ['#5260c8', '#a86a32', '#357d97', '#3d8a66', '#9a4f8f', '#b5523b', '#5f7d2e', '#6b6f7d'];
+  const MAP_W = 1000, MAP_H = 660;
+
+  const mapFor = (pid = currentProject()?.id) => (state.maps[pid] ||= { themes: [], assign: {}, links: [], pos: {}, dismissed: [], seen: [] });
+  function themeOf(ev) {
+    const m = ev && state.maps[ev.projectId];
+    const id = m && m.assign[ev.id];
+    return id ? m.themes.find(x => x.id === id) || null : null;
+  }
+
+  /* Text analysis helpers */
+  const stem = (w) => (w.length > 5 ? w.replace(/(ations?|ings?|ness|ments?|ities|ity|ies|es|ed|ly|s)$/, '') : w);
+  function tokenize(text) {
+    return (text || '').toLowerCase().split(/[^\p{L}\p{N}]+/u)
+      .filter(w => w.length > 2 && !STOP.has(w) && !/^\d+$/.test(w));
+  }
+  /* TF-IDF vectors for a set of evidence; document frequencies come from every passage in the project's PDFs */
+  function buildVectors(evs, p) {
+    const allDocs = p.sources.filter(s => PASSAGES.has(s.id)).flatMap(s => PASSAGES.get(s.id).passages.map(x => x.text));
+    const corpus = allDocs.length >= evs.length ? allDocs : evs.map(e => e.excerpt);
+    const df = {};
+    corpus.forEach(d => new Set(tokenize(d).map(stem)).forEach(w => { df[w] = (df[w] || 0) + 1; }));
+    const N = corpus.length;
+    const surface = {};
+    const vecs = evs.map(e => {
+      const words = tokenize(e.excerpt + ' ' + e.title);
+      const tf = {};
+      words.forEach(w => { const s = stem(w); tf[s] = (tf[s] || 0) + 1; (surface[s] ||= {})[w] = ((surface[s] || {})[w] || 0) + 1; });
+      const v = {};
+      let norm = 0;
+      Object.keys(tf).forEach(w => { const x = (tf[w] / words.length) * Math.log(1 + N / (df[w] || 1)); v[w] = x; norm += x * x; });
+      norm = Math.sqrt(norm) || 1;
+      Object.keys(v).forEach(w => { v[w] /= norm; });
+      return v;
+    });
+    const word = (s) => Object.entries(surface[s] || { [s]: 1 }).sort((a, b) => b[1] - a[1])[0][0];
+    return { vecs, word };
+  }
+  function cosine(a, b) {
+    let s = 0;
+    const [x, y] = Object.keys(a).length < Object.keys(b).length ? [a, b] : [b, a];
+    for (const k in x) if (y[k]) s += x[k] * y[k];
+    return s;
+  }
+  function sharedTerms(a, b, word, n = 3) {
+    return Object.keys(a).filter(k => b[k]).sort((k1, k2) => (b[k2] * a[k2]) - (b[k1] * a[k1])).slice(0, n).map(word);
+  }
+
+  /* Agglomerative (average-link) clustering of evidence into suggested themes */
+  function suggestThemes(evs, p) {
+    const { vecs, word } = buildVectors(evs, p);
+    const n = evs.length;
+    const sim = vecs.map(a => vecs.map(b => cosine(a, b)));
+    let clusters = evs.map((_, i) => [i]);
+    const target = Math.max(1, Math.min(6, Math.round(Math.sqrt(n))));
+    const avg = (A, B) => { let s = 0; A.forEach(i => B.forEach(j => { s += sim[i][j]; })); return s / (A.length * B.length); };
+    while (clusters.length > target) {
+      let best = -1, bi = 0, bj = 1;
+      for (let i = 0; i < clusters.length; i++) for (let j = i + 1; j < clusters.length; j++) {
+        const s = avg(clusters[i], clusters[j]);
+        if (s > best) { best = s; bi = i; bj = j; }
+      }
+      if (best < 0.04) break;
+      clusters[bi] = clusters[bi].concat(clusters[bj]);
+      clusters.splice(bj, 1);
+    }
+    // Leftover single cards join "Other" instead of becoming one-card themes
+    const groups = clusters.filter(c => c.length > 1);
+    const singles = clusters.filter(c => c.length === 1).flat();
+    if (singles.length) groups.push(singles);
+    return groups.map((g, gi) => {
+      const centroid = {};
+      g.forEach(i => Object.entries(vecs[i]).forEach(([k, v]) => { centroid[k] = (centroid[k] || 0) + v; }));
+      const shared = Object.entries(centroid)
+        .filter(([k]) => g.length === 1 || g.filter(i => vecs[i][k]).length >= 2)
+        .sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k]) => word(k));
+      const isOther = gi === groups.length - 1 && singles.length && g === groups[groups.length - 1] && singles.length === g.length && groups.length > 1;
+      const label = isOther ? t('map.other') : shared.map(w => w[0].toUpperCase() + w.slice(1)).join(' · ') || t('map.themeN', { n: gi + 1 });
+      return { name: label, members: g.map(i => evs[i].id) };
+    });
+  }
+
+  function autoGroup(confirmReplace) {
+    const p = currentProject();
+    const m = mapFor(p.id);
+    const evs = projectEvidence(p.id);
+    if (evs.length < 2) { toast(t('map.needTwo'), { icon: 'info', type: 'warn' }); return; }
+    if (confirmReplace && m.themes.length && !confirm(t('map.regroupConfirm'))) return;
+    const groups = suggestThemes(evs, p);
+    m.themes = groups.map((g, i) => ({ id: uid('t'), name: g.name, color: THEME_PALETTE[i % THEME_PALETTE.length] }));
+    m.assign = {};
+    groups.forEach((g, i) => g.members.forEach(id => { m.assign[id] = m.themes[i].id; }));
+    m.pos = {};
+    m.seen = evs.map(e => e.id);
+    m.autoDone = true;
+    touchProject(); logActivity('waypoints', 'act.grouped', { n: m.themes.length }); commit();
+    drawMap();
+    toast(t('map.grouped', { n: m.themes.length }), { icon: 'sparkles' });
+  }
+
+  /* Newly saved evidence goes to its closest existing theme (if clearly related) */
+  function placeNewEvidence(p, evs) {
+    const m = mapFor(p.id);
+    const fresh = evs.filter(e => !m.seen.includes(e.id));
+    if (!fresh.length) return;
+    if (m.themes.length) {
+      const { vecs } = buildVectors(evs, p);
+      const idx = Object.fromEntries(evs.map((e, i) => [e.id, i]));
+      fresh.forEach(e => {
+        let best = null, bestSim = 0.06;
+        m.themes.forEach(th => {
+          const members = evs.filter(x => m.assign[x.id] === th.id);
+          if (!members.length) return;
+          const s = members.reduce((acc, x) => acc + cosine(vecs[idx[e.id]], vecs[idx[x.id]]), 0) / members.length;
+          if (s > bestSim) { bestSim = s; best = th.id; }
+        });
+        if (best) m.assign[e.id] = best;
+      });
+    }
+    m.seen = [...new Set(m.seen.concat(fresh.map(e => e.id)))];
+    persist();
+  }
+
+  /* Suggested similarity links (not stored; dismissible) */
+  function autoLinks(evs, p) {
+    const m = mapFor(p.id);
+    if (evs.length < 2) return [];
+    const { vecs, word } = buildVectors(evs, p);
+    const pairs = [];
+    for (let i = 0; i < evs.length; i++) for (let j = i + 1; j < evs.length; j++) {
+      const s = cosine(vecs[i], vecs[j]);
+      if (s >= 0.18) pairs.push({ a: evs[i].id, b: evs[j].id, s, terms: sharedTerms(vecs[i], vecs[j], word) });
+    }
+    const degree = {};
+    const key = (a, b) => [a, b].sort().join('|');
+    const manual = new Set(m.links.map(l => key(l.a, l.b)));
+    return pairs.sort((x, y) => y.s - x.s).filter(pr => {
+      if (manual.has(key(pr.a, pr.b)) || m.dismissed.includes(key(pr.a, pr.b))) return false;
+      if ((degree[pr.a] || 0) >= 3 || (degree[pr.b] || 0) >= 3) return false;
+      degree[pr.a] = (degree[pr.a] || 0) + 1; degree[pr.b] = (degree[pr.b] || 0) + 1;
+      return true;
+    }).map(pr => ({ id: 'auto:' + key(pr.a, pr.b), a: pr.a, b: pr.b, type: 'similar', auto: true, score: pr.s, terms: pr.terms }));
+  }
+
+  /* Default positions: one column per theme (theme on top, its quotes stacked underneath),
+     plus a "No theme" column. The canvas grows taller when a column gets long. */
+  function layout(p, evs) {
+    const m = mapFor(p.id);
+    const pos = {};
+    const loose = evs.filter(e => !m.assign[e.id] || !m.themes.some(th => th.id === m.assign[e.id]));
+    const columns = m.themes.map(th => ({ key: 't:' + th.id, members: evs.filter(e => m.assign[e.id] === th.id) }));
+    if (loose.length) columns.push({ key: null, members: loose });
+    const colW = MAP_W / Math.max(1, columns.length);
+    const ROW = 145, TOP = 70, FIRST = 190;
+    let maxRows = 1;
+    columns.forEach((col, ci) => {
+      const cx = colW * ci + colW / 2;
+      if (col.key) pos[col.key] = [cx, TOP];
+      const sub = colW >= 420 ? 2 : 1;
+      col.members.forEach((e, j) => {
+        const row = Math.floor(j / sub);
+        const x = sub === 1 ? cx : cx + (j % sub === 0 ? -1 : 1) * colW / 4.4;
+        pos['e:' + e.id] = [x, FIRST + row * ROW];
+        maxRows = Math.max(maxRows, row + 1);
+      });
+    });
+    const H = Math.max(MAP_H, FIRST + maxRows * ROW);
+    Object.keys(pos).forEach(key => {
+      if (m.pos[key]) pos[key] = m.pos[key];
+      pos[key] = [Math.min(MAP_W - 70, Math.max(70, pos[key][0])), Math.min(H - 50, Math.max(40, pos[key][1]))];
+    });
+    return { pos, H, columns: columns.length };
+  }
+
+  function currentEdges(p, evs) {
+    const m = mapFor(p.id);
+    const ids = new Set(evs.map(e => e.id));
     const edges = [];
-    projectEvidence().forEach(e => e.themes.forEach(t => edges.push({ from: 't:' + t, to: 'e:' + e.id, type: 'theme' })));
-    CONNECTIONS.forEach(c => edges.push({ from: 'e:' + c.a, to: 'e:' + c.b, type: c.type, note: c.note }));
+    evs.forEach(e => { const th = themeOf(e); if (th) edges.push({ from: 't:' + th.id, to: 'e:' + e.id, type: 'theme' }); });
+    m.links.filter(l => ids.has(l.a) && ids.has(l.b)).forEach(l => edges.push({ from: 'e:' + l.a, to: 'e:' + l.b, type: l.type, link: l }));
+    autoLinks(evs, p).forEach(l => edges.push({ from: 'e:' + l.a, to: 'e:' + l.b, type: 'similar', link: l, auto: true }));
     return edges;
   }
 
   function renderMap() {
     const p = currentProject();
-    if (!hasRealEvidence(p.id)) {
+    const evs = projectEvidence(p.id);
+    if (!evs.length) {
       $('#page-map').innerHTML = `
-        <div class="page-header"><div><h1>Insight Map</h1><p>Explore how findings across your sources relate to each other.</p></div></div>
-        <div class="empty">
+        <div class="page-header"><div><h1>${t('nav.map')}</h1><p>${t('map.sub')}</p></div></div>
+        <div class="empty empty-project">
           <div class="empty-icon"><i data-lucide="waypoints"></i></div>
-          <h3>Your map will appear once evidence is extracted</h3>
-          <p>Themes and connections are generated from evidence cards. Open the demo project to explore a populated Insight Map.</p>
-          <button class="btn btn-primary btn-sm" data-action="open-project" data-id="${DEMO_PROJECT}" data-goto="map">Open demo project</button>
+          <h3>${t('map.emptyT')}</h3>
+          <p>${t('map.emptyS')}</p>
+          <button class="btn btn-primary btn-sm" data-action="go" data-page="evidence"><i data-lucide="library"></i>${t('b.goLib')}</button>
         </div>`;
       return;
     }
-
+    const m = mapFor(p.id);
+    if (!m.themes.length && !m.autoDone && evs.length >= 2) {
+      // First visit: suggest themes automatically
+      const groups = suggestThemes(evs, p);
+      m.themes = groups.map((g, i) => ({ id: uid('t'), name: g.name, color: THEME_PALETTE[i % THEME_PALETTE.length] }));
+      groups.forEach((g, i) => g.members.forEach(id => { m.assign[id] = m.themes[i].id; }));
+      m.seen = evs.map(e => e.id);
+      m.autoDone = true;
+      persist();
+    } else {
+      placeNewEvidence(p, evs);
+    }
     const f = ui.mapFilters;
     $('#page-map').innerHTML = `
       <div class="page-header">
-        <div>
-          <h1>Insight Map</h1>
-          <p>See how findings cluster into themes and where sources agree, differ or contradict. Select any node to inspect it.</p>
+        <div><h1>${t('nav.map')}</h1><p>${t('map.sub')}</p></div>
+        <div class="actions">
+          <button class="btn btn-outline btn-sm" data-action="map-add-theme"><i data-lucide="plus"></i>${t('map.addTheme')}</button>
+          <button class="btn btn-outline btn-sm" data-action="map-auto"><i data-lucide="sparkles"></i>${t('map.regroup')}</button>
+          <button class="btn btn-ghost btn-sm" data-action="map-reset-layout"><i data-lucide="layout-grid"></i>${t('map.tidy')}</button>
         </div>
-        <div class="actions"><button class="btn btn-outline btn-sm" data-action="clear-selection"><i data-lucide="maximize"></i>Reset view</button></div>
       </div>
       <div class="map-layout">
         <section class="panel map-wrap">
           <div class="map-toolbar">
-            <div class="legend" aria-label="Connection types — toggle to show or hide">
-              ${legendItem('theme', 'Belongs to theme', f.theme)}
-              ${legendItem('similar', 'Similarity', f.similar)}
-              ${legendItem('different', 'Difference', f.different)}
-              ${legendItem('contradicts', 'Contradiction', f.contradicts)}
+            <div class="legend">
+              ${legendItem('theme', t('map.theme'), f.theme)}
+              ${legendItem('similar', t('conn.similar'), f.similar)}
+              ${legendItem('different', t('conn.different'), f.different)}
+              ${legendItem('contradicts', t('conn.contradicts'), f.contradicts)}
             </div>
-            <span class="result-meta">${Object.keys(THEMES).length} themes · ${projectEvidence().length} evidence</span>
+            <span class="result-meta" id="mapMeta"></span>
           </div>
-          <div class="map-scroll">
-            <div class="map-canvas" id="mapCanvas"></div>
-          </div>
+          <div class="map-linking" id="mapLinking" hidden></div>
+          <div class="map-scroll"><div class="map-canvas" id="mapCanvas"></div></div>
         </section>
         <aside class="panel map-detail" id="mapDetail"></aside>
       </div>`;
     drawMap();
   }
-
   function legendItem(type, label, checked) {
     return `<label class="legend-item"><input type="checkbox" data-conn-filter="${type}" ${checked ? 'checked' : ''}/><span class="legend-line ${type}"></span>${label}</label>`;
   }
@@ -888,146 +2188,205 @@
   function drawMap() {
     const canvas = $('#mapCanvas');
     if (!canvas) return;
+    const p = currentProject();
+    const m = mapFor(p.id);
+    const evs = projectEvidence(p.id);
+    const { pos, H, columns } = layout(p, evs);
+    ui.mapH = H;
+    canvas.style.aspectRatio = `${MAP_W} / ${H}`;
+    canvas.style.minWidth = Math.max(740, columns * 190) + 'px';
     const sel = ui.mapSelected;
-    const edges = mapEdges().filter(e => ui.mapFilters[e.type]);
-
-    // Related nodes/edges for highlighting
+    const edges = currentEdges(p, evs).filter(e => ui.mapFilters[e.type]);
     const related = new Set();
     const relatedEdges = new Set();
     if (sel) {
       related.add(sel);
-      edges.forEach((e, i) => {
-        if (e.from === sel || e.to === sel) { related.add(e.from); related.add(e.to); relatedEdges.add(i); }
-      });
+      edges.forEach((e, i) => { if (e.from === sel || e.to === sel) { related.add(e.from); related.add(e.to); relatedEdges.add(i); } });
     }
-
-    const pos = (key) => MAP_LAYOUT[key] || [500, 330];
     const lines = edges.map((e, i) => {
-      const [x1, y1] = pos(e.from); const [x2, y2] = pos(e.to);
-      return `<line class="conn ${e.type} ${relatedEdges.has(i) ? 'related' : ''}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"><title>${e.note ? esc(e.note) : ''}</title></line>`;
+      const [x1, y1] = pos[e.from] || [0, 0]; const [x2, y2] = pos[e.to] || [0, 0];
+      return `<line class="conn ${e.type} ${e.auto ? 'auto' : ''} ${relatedEdges.has(i) ? 'related' : ''}" data-from="${e.from}" data-to="${e.to}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
     }).join('');
-
-    const nodeStyle = (key, color) => { const [x, y] = pos(key); return `left:${x / 10}%;top:${(y / 660) * 100}%;--c:${color}`; };
-
-    const themeNodes = Object.values(THEMES).map(t => {
-      const key = 't:' + t.id;
-      const n = projectEvidence().filter(e => e.themes.includes(t.id)).length;
-      return `<button class="map-node theme-node ${sel === key ? 'selected' : ''} ${related.has(key) ? 'related' : ''}" style="${nodeStyle(key, t.color)}" data-action="select-node" data-id="${key}">
-        <span class="dot"></span>${t.name}<span class="n">${n}</span></button>`;
+    const nodeStyle = (key, color) => { const [x, y] = pos[key]; return `left:${x / MAP_W * 100}%;top:${y / H * 100}%;--c:${color}`; };
+    const themeNodes = m.themes.map(th => {
+      const key = 't:' + th.id;
+      const n = evs.filter(e => m.assign[e.id] === th.id).length;
+      return `<button class="map-node theme-node ${sel === key ? 'selected' : ''} ${related.has(key) ? 'related' : ''}" style="${nodeStyle(key, th.color)}" data-action="select-node" data-id="${key}">
+        <span class="dot"></span>${esc(th.name)}<span class="n">${n}</span></button>`;
     }).join('');
-
-    const evNodes = projectEvidence().map(e => {
+    const evNodes = evs.map(e => {
       const key = 'e:' + e.id;
       const src = sourceOf(e);
-      return `<button class="map-node ev-node ${sel === key ? 'selected' : ''} ${related.has(key) ? 'related' : ''}" style="${nodeStyle(key, THEMES[e.themes[0]].color)}" data-action="select-node" data-id="${key}" title="${esc(e.title)}">
-        <span class="ev-node-src">${esc(src.short)} · p.${e.page}</span>
+      const th = themeOf(e);
+      return `<button class="map-node ev-node ${sel === key ? 'selected' : ''} ${related.has(key) ? 'related' : ''} ${ui.linkFrom === e.id ? 'link-source' : ''}" style="${nodeStyle(key, th ? th.color : 'var(--border-strong)')}" data-action="select-node" data-id="${key}" title="${esc(e.title)}">
+        <span class="ev-node-src">${esc(inText(src, e.page, state.user.citation, sourceNumber(src)).replace(/^\(|\)$/g, ''))}</span>
         <span class="ev-node-title">${esc(e.title)}</span></button>`;
     }).join('');
-
-    canvas.classList.toggle('has-selection', !!sel);
-    canvas.innerHTML = `<svg class="map-lines" viewBox="0 0 1000 660" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${themeNodes}${evNodes}`;
+    canvas.classList.toggle('has-selection', !!sel && !ui.linkFrom);
+    canvas.classList.toggle('linking', !!ui.linkFrom);
+    canvas.innerHTML = `<svg class="map-lines" viewBox="0 0 ${MAP_W} ${H}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${themeNodes}${evNodes}`;
+    const userLinks = m.links.length;
+    const meta = $('#mapMeta');
+    if (meta) meta.textContent = t('map.meta', { a: m.themes.length, b: evs.length, c: userLinks });
+    const banner = $('#mapLinking');
+    if (banner) {
+      banner.hidden = !ui.linkFrom;
+      if (ui.linkFrom) banner.innerHTML = `<i data-lucide="link-2"></i><span>${t('map.pickTarget')}</span><button class="btn btn-ghost btn-sm" data-action="map-cancel-link">${t('common.cancel')}</button>`;
+    }
     renderMapDetail();
     icons();
+  }
+
+  function connBadge(type, auto) {
+    return `<span class="conn-badge ${type}"><i data-lucide="${CONN_ICONS[type]}"></i>${t('conn.' + type)}${auto ? ` · ${t('map.suggested')}` : ''}</span>`;
   }
 
   function renderMapDetail() {
     const panel = $('#mapDetail');
     if (!panel) return;
+    const p = currentProject();
+    const m = mapFor(p.id);
+    const evs = projectEvidence(p.id);
     const sel = ui.mapSelected;
-    const counts = { similar: 0, different: 0, contradicts: 0 };
-    CONNECTIONS.forEach(c => counts[c.type]++);
+    const closeBtn = `<button class="icon-btn sm" data-action="clear-selection" aria-label="${t('map.closeDetail')}"><i data-lucide="x"></i></button>`;
+
+    // Link form after picking two cards
+    if (ui.linkDraft) {
+      const a = evidenceById(ui.linkDraft.a), b = evidenceById(ui.linkDraft.b);
+      panel.innerHTML = `
+        <div class="panel-head"><h3>${t('map.newLink')}</h3>${closeBtn}</div>
+        <form class="detail-section" id="linkForm">
+          <div class="link-pair"><strong>${esc(a.title)}</strong><span>↔</span><strong>${esc(b.title)}</strong></div>
+          <div class="field"><label>${t('map.linkType')}</label>
+            <div class="type-pick">
+              ${['similar', 'different', 'contradicts'].map((tp, i) => `<label class="type-opt ${tp}"><input type="radio" name="type" value="${tp}" ${i === (ui.linkDraft.type === 'similar' ? 0 : ui.linkDraft.type === 'different' ? 1 : 2) ? 'checked' : ''}/><i data-lucide="${CONN_ICONS[tp]}"></i>${t('conn.' + tp)}</label>`).join('')}
+            </div></div>
+          <div class="field"><label>${t('map.linkNote')}</label><textarea name="note" rows="3" placeholder="${t('map.linkNotePh')}">${esc(ui.linkDraft.note || '')}</textarea></div>
+          <div class="form-actions"><button type="button" class="btn btn-ghost btn-sm" data-action="map-cancel-link">${t('common.cancel')}</button><button type="submit" class="btn btn-primary btn-sm"><i data-lucide="check"></i>${t('map.saveLink')}</button></div>
+        </form>`;
+      icons();
+      return;
+    }
 
     if (!sel) {
+      const contra = m.links.filter(l => l.type === 'contradicts');
       panel.innerHTML = `
-        <div class="panel-head"><h3>Map overview</h3></div>
-        <div class="map-hint"><i data-lucide="mouse-pointer-click"></i><span>Click a <strong>theme</strong> to see its evidence, or an <strong>evidence card</strong> to see how it connects to other findings.</span></div>
+        <div class="panel-head"><h3>${t('map.overview')}</h3></div>
+        <div class="map-hint"><i data-lucide="mouse-pointer-click"></i><span>${t('map.hint')}</span></div>
         <div class="detail-section">
-          <h4>At a glance</h4>
           <div class="overview-stats">
-            <div><strong>${Object.keys(THEMES).length}</strong><span>Themes</span></div>
-            <div><strong>${projectEvidence().length}</strong><span>Evidence nodes</span></div>
-            <div><strong>${counts.similar}</strong><span>Similarities</span></div>
-            <div><strong style="color:var(--red)">${counts.contradicts}</strong><span>Contradictions</span></div>
+            <div><strong>${m.themes.length}</strong><span>${t('map.themes')}</span></div>
+            <div><strong>${evs.length}</strong><span>${t('map.evNodes')}</span></div>
+            <div><strong>${m.links.length}</strong><span>${t('map.yourLinks')}</span></div>
+            <div><strong style="color:var(--red)">${contra.length}</strong><span>${t('map.contras')}</span></div>
           </div>
         </div>
         <div class="detail-section">
-          <h4>Tensions worth discussing</h4>
-          <ul class="detail-list">
-            ${CONNECTIONS.filter(c => c.type === 'contradicts').map(c => `
-              <li><button class="detail-link" data-action="select-node" data-id="e:${c.a}">
-                <span class="conn-badge contradicts"><i data-lucide="zap"></i>Contradiction</span>
-                <strong>${esc(evidenceById(c.a).title)} ↔ ${esc(evidenceById(c.b).title)}</strong>
-                <small>${esc(c.note)}</small>
-              </button></li>`).join('')}
-          </ul>
-        </div>`;
+          <h4>${t('map.howT')}</h4>
+          <ol class="how-list"><li>${t('map.how1')}</li><li>${t('map.how2')}</li><li>${t('map.how3')}</li></ol>
+        </div>
+        ${contra.length ? `<div class="detail-section"><h4>${t('map.tensions')}</h4><ul class="detail-list">
+          ${contra.map(l => `<li><button class="detail-link" data-action="select-node" data-id="e:${l.a}">${connBadge('contradicts')}<strong>${esc(evidenceById(l.a)?.title || '')} ↔ ${esc(evidenceById(l.b)?.title || '')}</strong>${l.note ? `<small>${esc(l.note)}</small>` : ''}</button></li>`).join('')}
+        </ul></div>` : ''}`;
       icons();
       return;
     }
 
     const [kind, id] = sel.split(':');
     if (kind === 't') {
-      const t = THEMES[id];
-      const evs = projectEvidence().filter(e => e.themes.includes(id));
-      const internal = CONNECTIONS.filter(c => evs.some(e => e.id === c.a) || evs.some(e => e.id === c.b));
+      const th = m.themes.find(x => x.id === id);
+      if (!th) { ui.mapSelected = null; renderMapDetail(); return; }
+      const members = evs.filter(e => m.assign[e.id] === id);
       panel.innerHTML = `
-        <div class="panel-head">
-          <span class="detail-kind"><span class="dot" style="--c:${t.color}"></span>Theme</span>
-          <button class="icon-btn sm" data-action="clear-selection" aria-label="Close details"><i data-lucide="x"></i></button>
+        <div class="panel-head"><span class="detail-kind"><span class="dot" style="--c:${th.color}"></span>${t('map.kindTheme')}</span>${closeBtn}</div>
+        <div class="detail-section">
+          <div class="field"><label for="themeName">${t('map.themeName')}</label><input id="themeName" data-theme-id="${th.id}" value="${esc(th.name)}" /></div>
+          <div class="swatches">${THEME_PALETTE.map(c => `<button class="swatch ${c === th.color ? 'on' : ''}" style="--c:${c}" data-action="map-theme-color" data-id="${th.id}" data-color="${c}" aria-label="${c}"></button>`).join('')}</div>
         </div>
         <div class="detail-section">
-          <h3 class="detail-title">${t.name}</h3>
-          <p class="detail-desc">${t.description}</p>
-        </div>
-        <div class="detail-section">
-          <h4>Evidence in this theme (${evs.length})</h4>
-          <ul class="detail-list">
-            ${evs.map(e => `<li><button class="detail-link" data-action="select-node" data-id="e:${e.id}">
-              <strong>${esc(e.title)}</strong><small>${esc(sourceOf(e).short)} · p. ${e.page}</small></button></li>`).join('')}
-          </ul>
-        </div>
-        <div class="detail-section">
-          <h4>Connections involving this theme</h4>
-          <p class="detail-desc">${internal.length} link${internal.length === 1 ? '' : 's'}: ${['similar', 'different', 'contradicts'].map(tp => `${internal.filter(c => c.type === tp).length} ${CONN_LABELS[tp].label.toLowerCase()}`).join(', ')}.</p>
-          <div style="margin-top:12px"><button class="btn btn-soft btn-sm" data-action="library-theme" data-theme="${id}"><i data-lucide="library"></i>Open in Evidence Library</button></div>
+          <h4>${t('map.inTheme', { n: members.length })}</h4>
+          ${members.length ? `<ul class="detail-list">${members.map(e => `<li><button class="detail-link" data-action="select-node" data-id="e:${e.id}"><strong>${esc(e.title)}</strong><small>${esc(shortCite(e))}</small></button></li>`).join('')}</ul>` : `<p class="detail-desc">${t('map.themeEmpty')}</p>`}
+          <div class="detail-actions">
+            <button class="btn btn-soft btn-sm" data-action="library-theme" data-theme="${th.id}"><i data-lucide="library"></i>${t('map.openLib')}</button>
+            <button class="btn btn-danger btn-sm" data-action="map-delete-theme" data-id="${th.id}"><i data-lucide="trash-2"></i>${t('map.deleteTheme')}</button>
+          </div>
         </div>`;
     } else {
       const e = evidenceById(id);
+      if (!e) { ui.mapSelected = null; renderMapDetail(); return; }
       const src = sourceOf(e);
-      const conns = CONNECTIONS.filter(c => c.a === id || c.b === id);
-      const saved = isSaved(id);
+      const th = themeOf(e);
+      const links = m.links.filter(l => l.a === id || l.b === id).map(l => ({ ...l }));
+      const autos = autoLinks(evs, p).filter(l => l.a === id || l.b === id);
       panel.innerHTML = `
-        <div class="panel-head">
-          <span class="detail-kind"><span class="dot" style="--c:${THEMES[e.themes[0]].color}"></span>Evidence</span>
-          <button class="icon-btn sm" data-action="clear-selection" aria-label="Close details"><i data-lucide="x"></i></button>
-        </div>
+        <div class="panel-head"><span class="detail-kind"><span class="dot" style="--c:${th ? th.color : 'var(--border-strong)'}"></span>${t('map.kindEv')}</span>${closeBtn}</div>
         <div class="detail-section">
-          <div class="ev-tags">${e.themes.map(t => `<button class="tag" data-action="select-node" data-id="t:${t}" style="border:0"><span class="dot" style="--c:${THEMES[t].color}"></span>${THEMES[t].name}</button>`).join('')}</div>
           <h3 class="detail-title">${esc(e.title)}</h3>
-          <div class="ev-ai" style="margin-bottom:12px"><span class="label-ai"><i data-lucide="sparkles"></i>AI explanation</span><p>${esc(e.extracted)}</p></div>
-          <blockquote class="ev-excerpt"><span class="label-src"><i data-lucide="quote"></i>Original excerpt</span><p>“${esc(e.excerpt)}”</p></blockquote>
+          <blockquote class="ev-excerpt"><span class="label-src"><i data-lucide="quote"></i>${t('ev.excerpt')}</span><p>“${esc(e.excerpt)}”</p></blockquote>
           <div class="ev-foot" style="margin-top:12px">
-            <span class="ev-src"><i data-lucide="file-text"></i><span>${esc(src.file)}</span></span><span class="page-pill">p. ${e.page}</span>
+            <span class="ev-src"><i data-lucide="file-text"></i><span>${esc(src.file)}</span></span>
+            <span class="page-pill">${t('common.page', { n: e.page })}</span>
+            <span class="ev-cite">${inText(src, e.page, state.user.citation, sourceNumber(src), true)}</span>
           </div>
-          <div style="margin-top:12px">
-            <button class="btn btn-sm ${saved ? 'btn-danger' : 'btn-outline'}" data-action="toggle-save" data-id="${id}">
-              <i data-lucide="${saved ? 'bookmark-minus' : 'bookmark-plus'}"></i>${saved ? 'Remove from library' : 'Save Evidence'}</button>
-          </div>
+          <div class="field" style="margin-top:14px"><label for="evTheme">${t('map.kindTheme')}</label>
+            <select id="evTheme" data-ev-theme="${e.id}">
+              <option value="">${t('map.unsorted')}</option>
+              ${m.themes.map(x => `<option value="${x.id}" ${th && th.id === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+            </select></div>
+          <button class="btn btn-primary btn-sm" data-action="map-start-link" data-id="${e.id}"><i data-lucide="link-2"></i>${t('map.connect')}</button>
         </div>
         <div class="detail-section">
-          <h4>Connections (${conns.length})</h4>
-          ${conns.length ? `<ul class="detail-list">${conns.map(c => {
-            const other = evidenceById(c.a === id ? c.b : c.a);
-            return `<li><button class="detail-link" data-action="select-node" data-id="e:${other.id}">
-              <span class="conn-badge ${c.type}"><i data-lucide="${CONN_LABELS[c.type].icon}"></i>${CONN_LABELS[c.type].label}</span>
-              <strong>${esc(other.title)}</strong>
-              <small>${esc(c.note)}</small></button></li>`;
-          }).join('')}</ul>` : '<p class="detail-desc">No direct connections with other evidence yet.</p>'}
+          <h4>${t('map.conns', { n: links.length + autos.length })}</h4>
+          ${links.length || autos.length ? `<ul class="detail-list">
+            ${links.map(l => { const other = evidenceById(l.a === id ? l.b : l.a); return `<li class="link-item">
+              <button class="detail-link" data-action="select-node" data-id="e:${other.id}">${connBadge(l.type)}<strong>${esc(other.title)}</strong>${l.note ? `<small>${esc(l.note)}</small>` : ''}</button>
+              <button class="icon-btn sm danger" data-action="map-delete-link" data-id="${l.id}" aria-label="${t('map.deleteLink')}"><i data-lucide="trash-2"></i></button></li>`; }).join('')}
+            ${autos.map(l => { const other = evidenceById(l.a === id ? l.b : l.a); return `<li class="link-item">
+              <button class="detail-link" data-action="select-node" data-id="e:${other.id}">${connBadge('similar', true)}<strong>${esc(other.title)}</strong><small>${t('map.sharedTerms', { w: l.terms.join(', ') })}</small></button>
+              <span class="link-tools">
+                <button class="icon-btn sm" data-action="map-keep-link" data-a="${l.a}" data-b="${l.b}" title="${t('map.keep')}" aria-label="${t('map.keep')}"><i data-lucide="check"></i></button>
+                <button class="icon-btn sm" data-action="map-dismiss-link" data-a="${l.a}" data-b="${l.b}" title="${t('map.dismiss')}" aria-label="${t('map.dismiss')}"><i data-lucide="x"></i></button>
+              </span></li>`; }).join('')}
+          </ul>` : `<p class="detail-desc">${t('map.noConns')}</p>`}
         </div>`;
     }
     icons();
   }
 
+  /* Dragging nodes (pointer events), a short press without movement still counts as a click */
+  let mapDrag = null;
+  document.addEventListener('pointerdown', (e) => {
+    const node = e.target.closest('#mapCanvas .map-node');
+    if (!node || e.button !== 0) return;
+    const canvas = $('#mapCanvas');
+    mapDrag = { node, key: node.dataset.id, x0: e.clientX, y0: e.clientY, moved: false, rect: canvas.getBoundingClientRect() };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!mapDrag) return;
+    if (!mapDrag.moved && Math.hypot(e.clientX - mapDrag.x0, e.clientY - mapDrag.y0) < 5) return;
+    mapDrag.moved = true;
+    mapDrag.node.classList.add('dragging');
+    const r = mapDrag.rect;
+    const x = Math.min(MAP_W - 60, Math.max(60, (e.clientX - r.left) / r.width * MAP_W));
+    const H = ui.mapH || MAP_H;
+    const y = Math.min(H - 30, Math.max(30, (e.clientY - r.top) / r.height * H));
+    mapDrag.pos = [x, y];
+    mapDrag.node.style.left = (x / MAP_W * 100) + '%';
+    mapDrag.node.style.top = (y / H * 100) + '%';
+    $$(`#mapCanvas line[data-from="${mapDrag.key}"]`).forEach(l => { l.setAttribute('x1', x); l.setAttribute('y1', y); });
+    $$(`#mapCanvas line[data-to="${mapDrag.key}"]`).forEach(l => { l.setAttribute('x2', x); l.setAttribute('y2', y); });
+  });
+  document.addEventListener('pointerup', () => {
+    if (!mapDrag) return;
+    if (mapDrag.moved && mapDrag.pos) {
+      mapFor().pos[mapDrag.key] = mapDrag.pos.map(Math.round);
+      persist();
+      ui.suppressClick = true;
+      setTimeout(() => { ui.suppressClick = false; }, 0);
+    }
+    mapDrag.node.classList.remove('dragging');
+    mapDrag = null;
+  });
   /* ---------- Argument Builder ---------- */
   function renderBuilder() {
     const p = currentProject();
@@ -1035,25 +2394,22 @@
     const saved = savedList().map(evidenceById).filter(Boolean);
     const usage = {};
     o.args.forEach(a => a.evidence.forEach(id => { usage[id] = (usage[id] || 0) + 1; }));
-
-    const unsupported = o.args.filter(a => !a.evidence.length && a.claim);
+    const unsupported = o.args.filter(a => !a.evidence.length && L(a.claim));
     const hasCounter = o.args.some(a => a.type === 'counter');
     const checks = [
-      { ok: !!o.thesis, text: o.thesis ? 'Central argument defined' : 'Write a central argument' },
-      { ok: o.args.length >= 2, text: `${o.args.length} argument section${o.args.length === 1 ? '' : 's'}` },
-      { ok: !unsupported.length, text: unsupported.length ? `${unsupported.length} section${unsupported.length > 1 ? 's' : ''} without evidence` : 'Every section has evidence' },
-      { ok: hasCounter, text: hasCounter ? 'Counterargument addressed' : 'Consider adding a counterargument' }
+      { ok: !!L(o.thesis), text: t(L(o.thesis) ? 'b.ckThesis' : 'b.ckThesisW') },
+      { ok: o.args.length >= 2, text: t('b.ckSections', { n: o.args.length }) },
+      { ok: !unsupported.length, text: unsupported.length ? t('b.ckNoEv', { n: unsupported.length }) : t('b.ckAllEv') },
+      { ok: hasCounter, text: t(hasCounter ? 'b.ckCounter' : 'b.ckCounterW') }
     ];
 
     $('#page-builder').innerHTML = `
       <div class="page-header">
-        <div>
-          <h1>Argument Builder</h1>
-          <p>Shape your evidence into an academic outline. Drag sections to reorder, and drag saved evidence onto any section to link it.</p>
-        </div>
+        <div><h1>${t('nav.builder')}</h1><p>${t('b.sub')}</p></div>
         <div class="actions">
-          <button class="btn btn-outline" data-action="export-outline"><i data-lucide="copy"></i>Copy outline</button>
-          <button class="btn btn-primary" data-action="add-arg"><i data-lucide="plus"></i>Add section</button>
+          <button class="btn btn-outline" data-action="open-refs-used"><i data-lucide="book-marked"></i>${t('b.refs')}</button>
+          <button class="btn btn-outline" data-action="export-outline"><i data-lucide="copy"></i>${t('b.copy')}</button>
+          <button class="btn btn-primary" data-action="add-arg"><i data-lucide="plus"></i>${t('b.add')}</button>
         </div>
       </div>
 
@@ -1063,93 +2419,90 @@
           <div class="arg-list" id="argList">
             ${o.args.map((a, i) => ui.editingArg === a.id ? argForm(a, i) : argCard(a, i, o.args.length)).join('')}
           </div>
-          ${!o.args.length ? `<div class="empty"><div class="empty-icon"><i data-lucide="list-tree"></i></div><h3>No sections yet</h3><p>Add supporting arguments, counterarguments and rebuttals, then link evidence to each one.</p></div>` : ''}
-          <button class="add-section" data-action="add-arg"><i data-lucide="plus"></i>Add argument section</button>
+          ${!o.args.length ? `<div class="empty"><div class="empty-icon"><i data-lucide="list-tree"></i></div><h3>${t('b.noSections')}</h3><p>${t('b.noSectionsSub')}</p></div>` : ''}
+          <button class="add-section" data-action="add-arg"><i data-lucide="plus"></i>${t('b.addLong')}</button>
         </div>
 
         <aside class="panel tray">
-          <div class="panel-head"><h3>Saved evidence</h3><span class="count-pill">${saved.length}</span></div>
+          <div class="panel-head"><h3>${t('b.saved')}</h3><span class="count-pill">${saved.length}</span></div>
           <div class="outline-check">
-            <strong>Outline check</strong>
+            <strong>${t('b.check')}</strong>
             <ul>${checks.map(c => `<li class="${c.ok ? 'ok' : 'warn'}"><i data-lucide="${c.ok ? 'circle-check' : 'circle-alert'}"></i><span>${c.text}</span></li>`).join('')}</ul>
           </div>
           <div class="tray-list">
             ${saved.length ? saved.map(e => `
-              <div class="tray-item" draggable="true" data-drag-evidence="${e.id}" title="Drag onto a section to link">
+              <div class="tray-item" draggable="true" data-drag-evidence="${e.id}" title="${t('b.dragHint')}">
                 <i data-lucide="grip-vertical"></i>
-                <div><strong>${esc(e.title)}</strong><small>${esc(sourceOf(e).short || sourceOf(e).file)} · p. ${e.page}${usage[e.id] ? `<span class="used-pill">Used ${usage[e.id]}×</span>` : ''}</small></div>
+                <div><strong>${esc(L(e.title))}</strong><small>${esc(shortCite(e))}${usage[e.id] ? `<span class="used-pill">${t('b.used', { n: usage[e.id] })}</span>` : ''}</small></div>
               </div>`).join('')
-              : `<div class="empty" style="padding:24px 16px"><p style="margin-bottom:10px">Save evidence in the library to link it here.</p><button class="btn btn-soft btn-sm" data-action="go" data-page="evidence">Go to Evidence Library</button></div>`}
+              : `<div class="empty" style="padding:24px 16px"><p style="margin-bottom:10px">${t('b.trayEmpty')}</p><button class="btn btn-soft btn-sm" data-action="go" data-page="evidence">${t('b.goLib')}</button></div>`}
           </div>
         </aside>
       </div>`;
 
-    if (ui.editingArg) {
-      const input = $(`#argForm-${ui.editingArg} input[name="claim"]`);
-      if (input) input.focus();
-    }
+    if (ui.editingArg) { const input = $(`#argForm-${ui.editingArg} input[name="claim"]`); if (input) input.focus(); }
   }
 
   function thesisCard(o) {
     const p = currentProject();
+    const thesis = L(o.thesis);
     if (ui.editingThesis) {
       return `
         <form class="thesis-card" id="thesisForm">
-          <div class="thesis-top"><span class="thesis-label"><i data-lucide="target"></i>Central argument / thesis</span></div>
-          <div class="field"><textarea name="thesis" rows="3" class="input" placeholder="State the main claim your research will defend…">${esc(o.thesis)}</textarea></div>
+          <div class="thesis-top"><span class="thesis-label"><i data-lucide="target"></i>${t('b.thesis')}</span></div>
+          <div class="field"><textarea name="thesis" rows="3" class="input" placeholder="${t('b.thesisPh')}">${esc(thesis)}</textarea></div>
           <div class="form-actions">
-            <button type="button" class="btn btn-ghost btn-sm" data-action="cancel-thesis">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="check"></i>Save thesis</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="cancel-thesis">${t('common.cancel')}</button>
+            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="check"></i>${t('b.saveThesis')}</button>
           </div>
         </form>`;
     }
     return `
       <section class="thesis-card">
         <div class="thesis-top">
-          <span class="thesis-label"><i data-lucide="target"></i>Central argument / thesis</span>
-          <button class="btn btn-ghost btn-sm" data-action="edit-thesis"><i data-lucide="pencil"></i>Edit</button>
+          <span class="thesis-label"><i data-lucide="target"></i>${t('b.thesis')}</span>
+          <button class="btn btn-ghost btn-sm" data-action="edit-thesis"><i data-lucide="pencil"></i>${t('common.edit')}</button>
         </div>
-        <p class="thesis-text ${o.thesis ? '' : 'placeholder'}">${o.thesis ? esc(o.thesis) : `Click edit to write your thesis. Research question: “${esc(p.question || 'not set')}”`}</p>
+        <p class="thesis-text ${thesis ? '' : 'placeholder'}">${thesis ? esc(thesis) : esc(t('b.thesisEmpty', { q: L(p.question) || '-' }))}</p>
       </section>`;
   }
 
   function argCard(a, i, total) {
-    const saved = savedList();
-    const linkable = saved.filter(id => !a.evidence.includes(id)).map(evidenceById).filter(Boolean);
+    const linkable = savedList().filter(id => !a.evidence.includes(id)).map(evidenceById).filter(Boolean);
     return `
       <article class="arg-card" data-id="${a.id}">
-        <div class="arg-handle" title="Drag to reorder" aria-hidden="true"><i data-lucide="grip-vertical"></i></div>
+        <div class="arg-handle" title="Drag" aria-hidden="true"><i data-lucide="grip-vertical"></i></div>
         <div class="arg-body">
           <div class="arg-top">
-            <span class="arg-num">Section ${i + 1}</span>
-            <span class="arg-type ${a.type}">${SECTION_TYPES[a.type]}</span>
+            <span class="arg-num">${t('b.section', { n: i + 1 })}</span>
+            <span class="arg-type ${a.type}">${t('type.' + a.type)}</span>
             <div class="arg-actions">
-              <button class="icon-btn sm" data-action="move-arg" data-id="${a.id}" data-dir="-1" aria-label="Move up" ${i === 0 ? 'disabled' : ''}><i data-lucide="arrow-up"></i></button>
-              <button class="icon-btn sm" data-action="move-arg" data-id="${a.id}" data-dir="1" aria-label="Move down" ${i === total - 1 ? 'disabled' : ''}><i data-lucide="arrow-down"></i></button>
-              <button class="icon-btn sm" data-action="edit-arg" data-id="${a.id}" aria-label="Edit section"><i data-lucide="pencil"></i></button>
-              <button class="icon-btn sm danger" data-action="delete-arg" data-id="${a.id}" aria-label="Delete section"><i data-lucide="trash-2"></i></button>
+              <button class="icon-btn sm" data-action="move-arg" data-id="${a.id}" data-dir="-1" aria-label="${t('b.moveUp')}" ${i === 0 ? 'disabled' : ''}><i data-lucide="arrow-up"></i></button>
+              <button class="icon-btn sm" data-action="move-arg" data-id="${a.id}" data-dir="1" aria-label="${t('b.moveDown')}" ${i === total - 1 ? 'disabled' : ''}><i data-lucide="arrow-down"></i></button>
+              <button class="icon-btn sm" data-action="edit-arg" data-id="${a.id}" aria-label="${t('b.editSec')}"><i data-lucide="pencil"></i></button>
+              <button class="icon-btn sm danger" data-action="delete-arg" data-id="${a.id}" aria-label="${t('b.delSec')}"><i data-lucide="trash-2"></i></button>
             </div>
           </div>
-          <h3 class="arg-claim">${esc(a.claim)}</h3>
-          ${a.explanation ? `<p class="arg-expl">${esc(a.explanation)}</p>` : ''}
+          <h3 class="arg-claim">${esc(L(a.claim))}</h3>
+          ${L(a.explanation) ? `<p class="arg-expl">${esc(L(a.explanation))}</p>` : ''}
           <div class="arg-evidence">
-            <div class="arg-evidence-label"><i data-lucide="link-2"></i>Linked evidence (${a.evidence.length})</div>
+            <div class="arg-evidence-label"><i data-lucide="link-2"></i>${t('b.linked', { n: a.evidence.length })}</div>
             <div class="ev-links">
               ${a.evidence.length ? a.evidence.map(id => {
                 const e = evidenceById(id); if (!e) return '';
                 return `<div class="ev-link">
-                  <span class="dot" style="--c:${THEMES[e.themes[0]].color}"></span>
-                  <div class="ev-link-text"><strong>${esc(e.title)}</strong><small>${esc(sourceOf(e).short)} · p. ${e.page}${isSaved(id) ? '' : ' · no longer in saved library'}</small></div>
-                  <button class="icon-btn sm" data-action="unlink-evidence" data-arg="${a.id}" data-id="${id}" aria-label="Unlink evidence"><i data-lucide="x"></i></button>
+                  <span class="dot" style="--c:${themeColor(e)}"></span>
+                  <div class="ev-link-text"><strong>${esc(L(e.title))}</strong><small>${esc(shortCite(e))}${isSaved(id) ? '' : ' · ' + t('b.notSaved')}</small></div>
+                  <button class="icon-btn sm" data-action="unlink-evidence" data-arg="${a.id}" data-id="${id}" aria-label="${t('b.unlink')}"><i data-lucide="x"></i></button>
                 </div>`;
-              }).join('') : '<div class="ev-link-warn"><i data-lucide="circle-alert"></i>No evidence linked yet — claims need support.</div>'}
+              }).join('') : `<div class="ev-link-warn"><i data-lucide="circle-alert"></i>${t('b.noEv')}</div>`}
             </div>
             <div class="link-row">
-              ${linkable.length ? `<select class="select" data-link-select="${a.id}" aria-label="Link saved evidence">
-                <option value="">+ Link saved evidence…</option>
-                ${linkable.map(e => `<option value="${e.id}">${esc(e.title)}</option>`).join('')}
+              ${linkable.length ? `<select class="select" data-link-select="${a.id}" aria-label="${t('b.linkSel')}">
+                <option value="">${t('b.linkSel')}</option>
+                ${linkable.map(e => `<option value="${e.id}">${esc(L(e.title))}</option>`).join('')}
               </select>` : ''}
-              <span class="drop-hint">or drag evidence from the panel</span>
+              <span class="drop-hint">${t('b.orDrag')}</span>
             </div>
           </div>
         </div>
@@ -1161,134 +2514,159 @@
       <form class="arg-card arg-form" id="argForm-${a.id}" data-id="${a.id}">
         <div class="arg-handle" aria-hidden="true"><i data-lucide="pencil"></i></div>
         <div class="arg-body">
-          <div class="arg-top"><span class="arg-num">Section ${i + 1} · Editing</span></div>
+          <div class="arg-top"><span class="arg-num">${t('b.editing', { n: i + 1 })}</span></div>
           <div class="field-row">
             <div class="field">
-              <label>Section type</label>
-              <select name="type">${Object.entries(SECTION_TYPES).map(([k, v]) => `<option value="${k}" ${a.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+              <label>${t('b.type')}</label>
+              <select name="type">${['supporting', 'counter', 'rebuttal'].map(k => `<option value="${k}" ${a.type === k ? 'selected' : ''}>${t('type.' + k)}</option>`).join('')}</select>
             </div>
             <div></div>
           </div>
-          <div class="field"><label>Claim <span class="req">*</span></label><input name="claim" value="${esc(a.claim)}" placeholder="State the point this section argues" required /></div>
-          <div class="field"><label>Reasoning</label><textarea name="explanation" rows="3" placeholder="Explain how the evidence supports this claim">${esc(a.explanation)}</textarea></div>
+          <div class="field"><label>${t('b.claim')} <span class="req">*</span></label><input name="claim" value="${esc(L(a.claim))}" placeholder="${t('b.claimPh')}" required /></div>
+          <div class="field"><label>${t('b.reason')}</label><textarea name="explanation" rows="3" placeholder="${t('b.reasonPh')}">${esc(L(a.explanation))}</textarea></div>
           <div class="form-actions">
-            <button type="button" class="btn btn-ghost btn-sm" data-action="cancel-arg" data-id="${a.id}">Cancel</button>
-            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="check"></i>Save section</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-action="cancel-arg" data-id="${a.id}">${t('common.cancel')}</button>
+            <button type="submit" class="btn btn-primary btn-sm"><i data-lucide="check"></i>${t('b.saveSec')}</button>
           </div>
         </div>
       </form>`;
   }
 
   function linkEvidence(argId, evId) {
-    const o = outlineFor();
-    const a = o.args.find(x => x.id === argId);
+    const a = outlineFor().args.find(x => x.id === argId);
     if (!a || !evId) return;
-    if (a.evidence.includes(evId)) { toast('That evidence is already linked to this section', { icon: 'info', type: 'warn' }); return; }
+    if (a.evidence.includes(evId)) { toast(t('b.already'), { icon: 'info', type: 'warn' }); return; }
     a.evidence.push(evId);
     touchProject();
-    logActivity('link-2', `Linked "${evidenceById(evId).title}" to "${a.claim}"`);
+    logActivity('link-2', 'act.linked', { e: evidenceById(evId).title, a: truncate(L(a.claim), 40) });
     commit();
     refresh();
-    toast('Evidence linked to section', { icon: 'link-2' });
+    toast(t('b.linkedToast'), { icon: 'link-2' });
+  }
+
+  function usedSourceIds() {
+    const ids = new Set();
+    outlineFor().args.forEach(a => a.evidence.forEach(id => { const e = evidenceById(id); if (e) ids.add(e.sourceId); }));
+    return [...ids];
   }
 
   function exportOutline() {
     const p = currentProject();
     const o = outlineFor();
-    let txt = `${p.title}\nResearch question: ${p.question || '—'}\n\nTHESIS\n${o.thesis || '—'}\n`;
+    const style = state.user.citation;
+    let txt = `${L(p.title)}\n${t('b.exportQ')}: ${L(p.question) || '-'}\n\n${t('b.exportThesis')}\n${L(o.thesis) || '-'}\n`;
     o.args.forEach((a, i) => {
-      txt += `\n${i + 1}. [${SECTION_TYPES[a.type]}] ${a.claim}\n`;
-      if (a.explanation) txt += `   ${a.explanation}\n`;
-      a.evidence.forEach(id => { const e = evidenceById(id); if (e) txt += `   - ${e.title} (${sourceOf(e).short}, p. ${e.page})\n`; });
+      txt += `\n${i + 1}. [${t('type.' + a.type)}] ${L(a.claim)}\n`;
+      if (L(a.explanation)) txt += `   ${L(a.explanation)}\n`;
+      a.evidence.forEach(id => { const e = evidenceById(id); if (e) txt += `   - ${L(e.title)} ${shortCite(e)}\n`; });
     });
-    const done = () => toast('Outline copied to clipboard', { icon: 'clipboard-check' });
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(txt).then(done, () => fallbackCopy(txt, done));
-    } else fallbackCopy(txt, done);
-  }
-  function fallbackCopy(txt, done) {
-    const ta = document.createElement('textarea');
-    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
-    document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); done(); } catch (e) { toast('Copy failed', { icon: 'x', type: 'warn' }); }
-    ta.remove();
+    const srcs = usedSourceIds().map(id => p.sources.find(s => s.id === id)).filter(Boolean);
+    if (srcs.length) {
+      txt += `\n${t('b.exportRefs')} (${CITATION_STYLES[style].label})\n`;
+      referenceList(srcs, style).forEach(r => { txt += stripTags(r.html) + '\n'; });
+    }
+    copyText(txt, () => toast(t('b.copied', { s: CITATION_STYLES[style].label }), { icon: 'clipboard-check' }));
   }
 
   /* ---------- Settings ---------- */
   function renderSettings() {
     const u = state.user;
     $('#page-settings').innerHTML = `
-      <div class="page-header"><div><h1>Settings</h1><p>Manage your profile and workspace preferences.</p></div></div>
+      <div class="page-header"><div><h1>${t('nav.settings')}</h1><p>${t('set.sub')}</p></div></div>
       <div class="settings-grid">
         <form class="panel" id="settingsForm">
-          <div class="panel-head"><h2>Profile</h2></div>
+          <div class="panel-head"><h2>${t('set.profile')}</h2></div>
           <div class="panel-body">
-            <div class="field"><label for="setName">Full name</label><input id="setName" name="name" value="${esc(u.name)}" required /></div>
-            <div class="field"><label for="setUni">University</label><input id="setUni" name="university" value="${esc(u.university)}" /></div>
-            <div class="field"><label for="setCite">Preferred citation style</label>
-              <select id="setCite" name="citation">${['APA 7', 'MLA 9', 'Chicago (author-date)', 'Harvard'].map(c => `<option ${u.citation === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+            <div class="field"><label for="setName">${t('set.name')}</label><input id="setName" name="name" value="${esc(u.name)}" required /></div>
+            <div class="field"><label for="setUni">${t('set.uni')}</label><input id="setUni" name="university" value="${esc(u.university)}" /></div>
+            <div class="field"><label for="setProg">${t('set.program')}</label><input id="setProg" name="program" value="${esc(u.program || '')}" /></div>
+          </div>
+          <div class="panel-head" style="padding-top:4px"><h2>${t('set.prefs')}</h2></div>
+          <div class="panel-body">
+            <div class="field">
+              <label for="setLang">${t('set.lang')}</label>
+              <select id="setLang" name="lang"><option value="en" ${state.lang === 'en' ? 'selected' : ''}>English</option><option value="vi" ${state.lang === 'vi' ? 'selected' : ''}>Tiếng Việt</option></select>
+              <small class="hint">${t('set.langNote')}</small>
             </div>
-            <div class="toggle-row">
-              <div><strong>Label AI-generated content</strong><small>Show an “AI explanation” label on every generated summary.</small></div>
-              <label class="switch"><input type="checkbox" name="showAiLabels" ${u.showAiLabels ? 'checked' : ''}/><span></span></label>
+            <div class="field">
+              <label for="setCite">${t('set.cite')}</label>
+              <select id="setCite" name="citation">${Object.entries(CITATION_STYLES).map(([k, v]) => `<option value="${k}" ${u.citation === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+              <small class="hint cite-preview" id="citePreview"></small>
             </div>
-            <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit"><i data-lucide="check"></i>Save changes</button></div>
+            <div class="form-actions" style="margin-top:12px"><button class="btn btn-primary" type="submit"><i data-lucide="check"></i>${t('set.save')}</button></div>
           </div>
         </form>
 
         <div style="display:flex;flex-direction:column;gap:20px">
           <section class="panel">
-            <div class="panel-head"><h2>Prototype data</h2></div>
+            <div class="panel-head"><h2>${t('set.help')}</h2></div>
             <div class="panel-body about">
-              <p>Your projects, saved evidence and outlines are stored in this browser’s local storage. Resetting restores the original sample workspace.</p>
-              <div style="margin-top:14px"><button class="btn btn-danger" data-action="reset-demo"><i data-lucide="rotate-ccw"></i>Reset demo data</button></div>
+              <p>${t('set.helpSub')}</p>
+              <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-soft" data-action="start-tour"><i data-lucide="compass"></i>${t('set.replay')}</button>
+                <a class="btn btn-outline" href="#home"><i data-lucide="info"></i>${t('set.viewIntro')}</a>
+              </div>
             </div>
           </section>
           <section class="panel">
-            <div class="panel-head"><h2>About Trace &amp; Think</h2></div>
+            <div class="panel-head"><h2>${t('set.data')}</h2></div>
             <div class="panel-body about">
-              <p><strong>Research with clarity. Think with evidence.</strong></p>
-              <p>This is a front-end prototype. AI answers, evidence extraction and connections are simulated with mock data, and uploaded PDFs are not parsed or sent anywhere.</p>
-              <p>All sample sources, authors and statistics are fictional and for demonstration only.</p>
+              <p>${t('set.dataSub')}</p>
+              <div style="margin-top:14px"><button class="btn btn-danger" data-action="reset-demo"><i data-lucide="trash-2"></i>${t('set.reset')}</button></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>${t('set.about')}</h2></div>
+            <div class="panel-body about">
+              <p><strong>${t('l.h1a')} ${t('l.h1b')}</strong></p>
+              <p>${t('set.about1')}</p>
+              <p>${t('set.about2')}</p>
             </div>
           </section>
         </div>
       </div>`;
+    updateCitePreview(u.citation);
+  }
+  function updateCitePreview(style) {
+    const el = $('#citePreview');
+    if (!el) return;
+    const s = EXAMPLE_SOURCE;
+    el.innerHTML = `${t('ref.inText')}: <code>${esc(inText(s, 9, style, 1))}</code>`;
   }
 
-  /* ------------------------------------------------------
-     MODAL: Create project
-     ------------------------------------------------------ */
+  /* ---------- Create project modal ---------- */
   function openModal() {
     ui.pendingFiles = [];
     const form = $('#projectForm');
     form.reset();
     $('#pfTitleError').hidden = true;
-    form.querySelector('.field').classList.remove('invalid');
+    $('#pfTitle').closest('.field').classList.remove('invalid');
     renderPendingFiles();
     $('#projectModal').hidden = false;
     document.body.style.overflow = 'hidden';
     setTimeout(() => $('#pfTitle').focus(), 30);
   }
-  function closeModal() {
-    $('#projectModal').hidden = true;
-    document.body.style.overflow = '';
-  }
-  function addPendingFiles(fileList) {
+  function closeModal() { $('#projectModal').hidden = true; document.body.style.overflow = ''; }
+  function pdfsOnly(fileList) {
     const files = [...fileList];
     const pdfs = files.filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
-    if (pdfs.length < files.length) toast(`${files.length - pdfs.length} file(s) skipped — only PDFs are supported`, { icon: 'triangle-alert', type: 'warn' });
-    pdfs.forEach(f => {
-      if (!ui.pendingFiles.some(x => x.name === f.name && x.size === f.size)) ui.pendingFiles.push({ name: f.name, size: f.size });
+    if (pdfs.length < files.length) toast(t('lib.skipped', { n: files.length - pdfs.length }), { icon: 'triangle-alert', type: 'warn' });
+    return pdfs;
+  }
+  function addPendingFiles(fileList) {
+    pdfsOnly(fileList).forEach(f => {
+      if (!ui.pendingFiles.some(x => x.name === f.name && x.size === f.size)) ui.pendingFiles.push({ name: f.name, size: f.size, file: f });
     });
     renderPendingFiles();
   }
   function renderPendingFiles() {
     $('#projectFileList').innerHTML = ui.pendingFiles.map((f, i) => `
       <li><i data-lucide="file-text"></i><span title="${esc(f.name)}">${esc(f.name)}</span><small>${formatSize(f.size)}</small>
-      <button type="button" class="icon-btn sm" data-action="remove-file" data-index="${i}" aria-label="Remove ${esc(f.name)}"><i data-lucide="x"></i></button></li>`).join('');
+      <button type="button" class="icon-btn sm" data-action="remove-file" data-index="${i}" aria-label="${esc(t('modal.remove', { t: f.name }))}"><i data-lucide="x"></i></button></li>`).join('');
     icons();
   }
+  function newSource(f) { return { id: uid('s'), file: f.name, title: fileToTitle(f.name), pages: null, size: formatSize(f.size), status: 'reading', progress: 0 }; }
+
   function createProject(form) {
     const data = Object.fromEntries(new FormData(form));
     const title = (data.title || '').trim();
@@ -1300,35 +2678,40 @@
     }
     const now = Date.now();
     const project = {
-      id: uid('p'), title, course: (data.course || '').trim(),
+      id: uid('p'), title, course: (data.course || '').trim().toUpperCase(),
       question: (data.question || '').trim(), description: (data.description || '').trim(), due: data.due || '',
-      sources: ui.pendingFiles.map(f => ({ id: uid('s'), file: f.name, title: fileToTitle(f.name), short: '', pages: null, size: formatSize(f.size) })),
-      sampleEvidence: 0, updated: now, created: now
+      sources: ui.pendingFiles.map(newSource), sampleEvidence: 0, updated: now, created: now
     };
     state.projects.unshift(project);
     state.currentProjectId = project.id;
     state.saved[project.id] = [];
     state.outlines[project.id] = { thesis: '', args: [] };
-    logActivity('folder-plus', `Created project "${title}"${project.sources.length ? ` with ${project.sources.length} source${project.sources.length > 1 ? 's' : ''}` : ''}`, project.id);
+    logActivity('folder-plus', 'act.created', { t: title }, project.id);
+    const files = ui.pendingFiles.map(f => f.file);
+    project.sources.forEach((s, i) => { if (files[i]) queueRead(project.id, s, files[i]); });
     resetLibraryFilters();
     commit();
     closeModal();
-    toast(`Project “${title}” created`, { icon: 'folder-check' });
-    navigate('dashboard');
+    toast(t('modal.created', { t: title }), { icon: 'folder-check' });
+    navigate(files.length ? 'evidence' : 'dashboard');
   }
 
   function addSourcesToCurrent(fileList) {
     const p = currentProject();
-    const files = [...fileList];
-    const pdfs = files.filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
-    if (pdfs.length < files.length) toast(`${files.length - pdfs.length} file(s) skipped — only PDFs are supported`, { icon: 'triangle-alert', type: 'warn' });
+    const pdfs = pdfsOnly(fileList);
     if (!pdfs.length) return;
-    pdfs.forEach(f => p.sources.push({ id: uid('s'), file: f.name, title: fileToTitle(f.name), short: '', pages: null, size: formatSize(f.size) }));
-    logActivity('file-up', pdfs.length === 1 ? `Uploaded ${pdfs[0].name}` : `Uploaded ${pdfs.length} sources`);
+    pdfs.forEach(f => {
+      const existing = p.sources.find(s => s.file === f.name && s.status !== 'reading');
+      const src = existing || newSource(f);
+      if (!existing) p.sources.push(src);
+      queueRead(p.id, src, f);
+    });
+    if (pdfs.length === 1) logActivity('file-up', 'act.uploaded', { f: pdfs[0].name });
+    else logActivity('file-up', 'act.uploadedN', { n: pdfs.length });
     touchProject();
     commit();
     refresh();
-    toast(`${pdfs.length} PDF${pdfs.length > 1 ? 's' : ''} added to ${p.title}`, { icon: 'file-check' });
+    toast(t('lib.pdfAdded', { n: pdfs.length, t: L(p.title) }), { icon: 'file-check' });
   }
 
   function resetLibraryFilters() {
@@ -1338,7 +2721,6 @@
     ui.editingArg = null;
     ui.editingThesis = false;
   }
-
   function switchProject(id) {
     if (!state.projects.some(p => p.id === id)) return;
     state.currentProjectId = id;
@@ -1347,7 +2729,124 @@
   }
 
   /* ------------------------------------------------------
-     6. EVENT HANDLING
+     9. ONBOARDING TOUR: spotlight + popover, skippable
+     ------------------------------------------------------ */
+  const TOUR = [
+    { center: true },
+    { page: 'dashboard', sel: '.sidebar .nav', sidebar: true },
+    { page: 'dashboard', sel: '.sidebar [data-tour="new-project"]', sidebar: true },
+    { page: 'dashboard', sel: '.workflow, .empty-project' },
+    { page: 'evidence', sel: '.ask-card, .empty-project' },
+    { page: 'evidence', sel: '#evidenceList .evidence-card, .empty-project' },
+    { page: 'map', sel: '.map-wrap, .empty-project' },
+    { page: 'builder', sel: '.outline, .empty-project' },
+    { page: 'builder', sel: '#langSwitch' }
+  ];
+  let tour = null;
+
+  function startTour() {
+    if (currentPage() === 'home') { state.seenLanding = true; navigate('dashboard'); }
+    if (!$('#tourLayer')) {
+      const layer = document.createElement('div');
+      layer.id = 'tourLayer';
+      layer.innerHTML = `<div class="tour-block"></div><div class="tour-spot"></div><div class="tour-pop" role="dialog" aria-modal="true" aria-live="polite"></div>`;
+      document.body.appendChild(layer);
+    }
+    tour = { i: 0 };
+    showTourStep();
+  }
+
+  function showTourStep() {
+    const step = TOUR[tour.i];
+    let delay = 40;
+    if (step.page && currentPage() !== step.page) { navigate(step.page); delay = 160; }
+    if (step.sidebar && isNarrow()) { delay = Math.max(delay, 160) + 280; setTimeout(openSidebar, delay - 280); }
+    else if (isNarrow()) closeSidebar();
+    $('#tourLayer').classList.add('is-moving');
+    setTimeout(() => {
+      if (!tour) return;
+      const el = step.sel && $(step.sel);
+      if (el && !step.sidebar) {
+        const r = el.getBoundingClientRect();
+        if (r.height > window.innerHeight - 200) window.scrollTo({ top: window.scrollY + r.top - 90 });
+        else window.scrollTo({ top: window.scrollY + r.top - (window.innerHeight - r.height) / 2 });
+      }
+      positionTour();
+      $('#tourLayer').classList.remove('is-moving');
+    }, delay);
+  }
+
+  function positionTour() {
+    if (!tour) return;
+    const layer = $('#tourLayer');
+    const step = TOUR[tour.i];
+    const total = TOUR.length;
+    const last = tour.i === total - 1;
+    const pop = $('.tour-pop', layer);
+    const spot = $('.tour-spot', layer);
+
+    pop.innerHTML = `
+      ${tour.i > 0 ? `<span class="tour-count">${t('tour.count', { i: tour.i, n: total - 1 })}</span>` : '<span class="tour-badge"><i data-lucide="compass"></i></span>'}
+      <h3>${t(`tour.${tour.i}.t`)}</h3>
+      <p>${t(`tour.${tour.i}.b`)}</p>
+      ${tour.i > 0 ? `<div class="tour-dots">${TOUR.slice(1).map((_, k) => `<span class="${k + 1 === tour.i ? 'on' : ''}"></span>`).join('')}</div>` : ''}
+      <div class="tour-actions">
+        <button class="btn btn-ghost btn-sm" data-action="tour-skip">${t('tour.skip')}</button>
+        <span class="spacer"></span>
+        ${tour.i > 1 ? `<button class="btn btn-outline btn-sm" data-action="tour-back">${t('tour.back')}</button>` : ''}
+        <button class="btn btn-primary btn-sm" data-action="tour-next">${tour.i === 0 ? t('tour.start') : last ? t('tour.finish') : t('tour.next')}</button>
+      </div>`;
+    icons();
+
+    const el = step.sel && $(step.sel);
+    const rect = el && el.getBoundingClientRect();
+    const visible = rect && rect.width > 0 && rect.height > 0;
+    layer.classList.toggle('centered', !visible);
+
+    const vw = window.innerWidth, vh = window.innerHeight, gap = 14, pad = 6;
+    const pw = Math.min(360, vw - 32);
+    pop.style.width = pw + 'px';
+    const ph = pop.offsetHeight;
+
+    if (!visible) {
+      spot.style.cssText = 'opacity:0';
+      pop.style.left = (vw - pw) / 2 + 'px';
+      pop.style.top = Math.max(16, (vh - ph) / 2) + 'px';
+      return;
+    }
+    const top = Math.max(rect.top, 8), bottom = Math.min(rect.bottom, vh - 8);
+    const box = { left: rect.left - pad, top: top - pad, width: rect.width + pad * 2, height: bottom - top + pad * 2 };
+    spot.style.cssText = `opacity:1;left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px`;
+
+    let left, ptop;
+    if (box.left + box.width + gap + pw < vw - 12) {            // right
+      left = box.left + box.width + gap; ptop = box.top;
+    } else if (box.top + box.height + gap + ph < vh - 12) {     // below
+      left = box.left; ptop = box.top + box.height + gap;
+    } else if (box.top - gap - ph > 12) {                       // above
+      left = box.left; ptop = box.top - gap - ph;
+    } else if (box.left - gap - pw > 12) {                      // left
+      left = box.left - gap - pw; ptop = box.top;
+    } else {                                                    // overlap, bottom of screen
+      left = (vw - pw) / 2; ptop = vh - ph - 16;
+    }
+    pop.style.left = Math.min(Math.max(12, left), vw - pw - 12) + 'px';
+    pop.style.top = Math.min(Math.max(12, ptop), vh - ph - 12) + 'px';
+  }
+
+  function endTour(completed) {
+    tour = null;
+    const layer = $('#tourLayer');
+    if (layer) layer.remove();
+    closeSidebar();
+    state.tourDone = true;
+    persist();
+    if (completed) { toast(t('tour.done'), { icon: 'party-popper' }); navigate('dashboard'); }
+    else if (currentPage() === 'dashboard') refresh();
+  }
+
+  /* ------------------------------------------------------
+     10. EVENT HANDLING
      ------------------------------------------------------ */
   const actions = {
     'open-new-project': () => openModal(),
@@ -1355,8 +2854,40 @@
     'toggle-sidebar': () => $('.app').classList.contains('nav-open') ? closeSidebar() : openSidebar(),
     'close-sidebar': () => closeSidebar(),
     'go': (el) => navigate(el.dataset.page),
-    'notifications': () => toast('You’re all caught up — no new notifications', { icon: 'bell' }),
+    'notifications': () => toast(t('top.noNotif'), { icon: 'bell' }),
+    'set-lang': (el) => setLang(el.dataset.lang),
 
+    // Landing
+    'enter-app': () => enterApp(),
+    'scroll-to': (el, ev) => { ev.preventDefault(); const target = document.getElementById(el.dataset.target); if (target) target.scrollIntoView({ behavior: 'smooth' }); },
+
+    // Tour
+    'start-tour': () => startTour(),
+    'tour-next': () => { if (tour.i >= TOUR.length - 1) endTour(true); else { tour.i++; showTourStep(); } },
+    'tour-back': () => { if (tour.i > 0) { tour.i--; showTourStep(); } },
+    'tour-skip': () => endTour(false),
+
+    // Projects
+    'edit-source': (el, ev) => { ev.stopPropagation(); openSourceEditor(el.dataset.id); },
+    'close-src': () => closeSourceEditor(),
+    'lookup-doi': async (el) => {
+      const input = $('#sfDoi');
+      const doi = findDoi(input.value) || input.value.trim();
+      if (!doi) { input.focus(); return; }
+      el.disabled = true;
+      try {
+        const meta = await lookupDoi(doi);
+        const set = (id, v) => { const x = $(id); if (x && v !== undefined && v !== null) x.value = v; };
+        set('#sfDoi', meta.doi); set('#sfType', meta.type); set('#sfYear', meta.year); set('#sfTitle', meta.title);
+        set('#sfAuthors', meta.authors.map(a => a.given ? `${a.family}, ${a.given}` : a.family).join('\n'));
+        set('#sfJournal', meta.journal); set('#sfVol', meta.volume); set('#sfIss', meta.issue); set('#sfPages', meta.range); set('#sfPub', meta.publisher);
+        updateSourcePreview();
+        toast(t('src.lookupOk'), { icon: 'badge-check' });
+      } catch (e) {
+        toast(t('src.lookupFail'), { icon: 'triangle-alert', type: 'warn' });
+      }
+      el.disabled = false;
+    },
     'open-project': (el, ev) => {
       if (ev.target.closest('[data-action="delete-project"]')) return;
       switchProject(el.dataset.id);
@@ -1365,22 +2896,23 @@
     'delete-project': (el, ev) => {
       ev.stopPropagation();
       const p = state.projects.find(x => x.id === el.dataset.id);
-      if (!p || !confirm(`Delete “${p.title}”? This removes its sources, saved evidence and outline from this browser.`)) return;
+      if (!p || !confirm(t('proj.confirmDelete', { t: L(p.title) }))) return;
       state.projects = state.projects.filter(x => x.id !== p.id);
-      delete state.saved[p.id]; delete state.outlines[p.id];
-      if (state.currentProjectId === p.id) { state.currentProjectId = state.projects[0].id; resetLibraryFilters(); }
+      delete state.saved[p.id]; delete state.outlines[p.id]; delete state.userEvidence[p.id]; delete state.maps[p.id];
+      p.sources.forEach(s => { PASSAGES.delete(s.id); idb.del(s.id).catch(() => {}); });
+      if (state.currentProjectId === p.id) { state.currentProjectId = state.projects[0] ? state.projects[0].id : null; resetLibraryFilters(); }
       commit(); refresh();
-      toast('Project deleted', { icon: 'trash-2' });
+      toast(t('proj.deleted'), { icon: 'trash-2' });
     },
 
     // Evidence library
     'toggle-save': (el) => {
       toggleSave(el.dataset.id);
       if (currentPage() === 'evidence') { renderEvidenceList(); renderAnswer(); }
-      else if (currentPage() === 'map') renderMapDetail();
+      else if (currentPage() === 'map') drawMap();
     },
     'filter-source': (el) => { ui.lib.source = el.dataset.id; refresh(); },
-    'set-tab': (el) => { ui.lib.tab = el.dataset.tab; $$('.tab').forEach(t => t.classList.toggle('active', t === el)); renderEvidenceList(); },
+    'set-tab': (el) => { ui.lib.tab = el.dataset.tab; $$('.tab').forEach(x => x.classList.toggle('active', x === el)); renderEvidenceList(); },
     'set-theme': (el) => { ui.lib.theme = el.dataset.theme; $$('[data-action="set-theme"]').forEach(c => c.classList.toggle('active', c === el)); renderEvidenceList(); },
     'clear-filters': () => { ui.lib = { ...ui.lib, query: '', theme: 'all', source: 'all' }; $('#globalSearch').value = ''; refresh(); },
     'ask-suggestion': (el) => { $('#askInput').value = el.dataset.q; askQuestion(el.dataset.q); },
@@ -1392,23 +2924,88 @@
     'upload-source': () => $('#sourceUpload').click(),
     'remove-file': (el) => { ui.pendingFiles.splice(+el.dataset.index, 1); renderPendingFiles(); },
     'view-in-map': (el) => { ui.mapSelected = 'e:' + el.dataset.id; navigate('map'); },
+    'copy-ref': (el) => {
+      const src = currentProject().sources.find(s => s.id === el.dataset.source);
+      if (!src) return;
+      const style = state.user.citation;
+      copyText(stripTags(reference(src, style, sourceNumber(src))), () => toast(t('ev.refCopied', { s: CITATION_STYLES[style].label }), { icon: 'clipboard-check' }));
+    },
+
+    // References
+    'open-refs': () => openRefs(),
+    'open-refs-used': () => openRefs(usedSourceIds()),
+    'close-ref': () => closeRefs(),
+    'copy-ref-list': () => {
+      const txt = referenceList(refSources(), ui.refStyle).map(r => stripTags(r.html)).join('\n');
+      copyText(txt, () => toast(t('ref.copied'), { icon: 'clipboard-check' }));
+    },
 
     // Insight map
     'select-node': (el) => {
-      ui.mapSelected = ui.mapSelected === el.dataset.id && el.classList.contains('map-node') ? null : el.dataset.id;
+      if (ui.suppressClick) return;   // the press was a drag, not a click
+      const id = el.dataset.id;
+      // Second click while connecting: open the link form
+      if (ui.linkFrom && id.startsWith('e:') && id.slice(2) !== ui.linkFrom) {
+        ui.linkDraft = { a: ui.linkFrom, b: id.slice(2), type: 'different' };
+        ui.linkFrom = null;
+        ui.mapSelected = id;
+        drawMap();
+        return;
+      }
+      ui.mapSelected = ui.mapSelected === id && el.classList.contains('map-node') ? null : id;
       drawMap();
     },
-    'clear-selection': () => { ui.mapSelected = null; drawMap(); },
-    'library-theme': (el) => { ui.lib = { query: '', theme: el.dataset.theme, source: 'all', tab: 'all' }; navigate('evidence'); },
+    'clear-selection': () => { ui.mapSelected = null; ui.linkFrom = null; ui.linkDraft = null; drawMap(); },
+    'library-theme': (el) => { ui.lib = { query: '', theme: el.dataset.theme, source: 'all', tab: 'saved' }; navigate('evidence'); },
+    'map-auto': () => autoGroup(true),
+    'map-reset-layout': () => { mapFor().pos = {}; persist(); drawMap(); },
+    'map-add-theme': () => {
+      const m = mapFor();
+      const th = { id: uid('t'), name: t('map.themeN', { n: m.themes.length + 1 }), color: THEME_PALETTE[m.themes.length % THEME_PALETTE.length] };
+      m.themes.push(th);
+      persist();
+      ui.mapSelected = 't:' + th.id;
+      drawMap();
+      const input = $('#themeName'); if (input) { input.focus(); input.select(); }
+    },
+    'map-theme-color': (el) => {
+      const th = mapFor().themes.find(x => x.id === el.dataset.id);
+      if (th) { th.color = el.dataset.color; persist(); drawMap(); }
+    },
+    'map-delete-theme': (el) => {
+      const m = mapFor();
+      const th = m.themes.find(x => x.id === el.dataset.id);
+      if (!th || !confirm(t('map.deleteThemeConfirm', { t: th.name }))) return;
+      m.themes = m.themes.filter(x => x.id !== th.id);
+      Object.keys(m.assign).forEach(k => { if (m.assign[k] === th.id) delete m.assign[k]; });
+      delete m.pos['t:' + th.id];
+      persist();
+      ui.mapSelected = null;
+      drawMap();
+    },
+    'map-start-link': (el) => { ui.linkFrom = el.dataset.id; ui.linkDraft = null; ui.mapSelected = null; drawMap(); },
+    'map-cancel-link': () => { ui.linkFrom = null; ui.linkDraft = null; drawMap(); },
+    'map-delete-link': (el) => {
+      const m = mapFor();
+      m.links = m.links.filter(l => l.id !== el.dataset.id);
+      touchProject(); commit(); drawMap();
+    },
+    'map-keep-link': (el) => {
+      mapFor().links.push({ id: uid('l'), a: el.dataset.a, b: el.dataset.b, type: 'similar', note: '' });
+      touchProject(); commit(); drawMap();
+    },
+    'map-dismiss-link': (el) => {
+      mapFor().dismissed.push([el.dataset.a, el.dataset.b].sort().join('|'));
+      persist(); drawMap();
+    },
 
     // Argument builder
-    'edit-thesis': () => { ui.editingThesis = true; refresh(); const t = $('#thesisForm textarea'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } },
+    'edit-thesis': () => { ui.editingThesis = true; refresh(); const ta = $('#thesisForm textarea'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } },
     'cancel-thesis': () => { ui.editingThesis = false; refresh(); },
     'add-arg': () => {
-      const o = outlineFor();
       if (ui.newArgId) return;
       const a = { id: uid('a'), type: 'supporting', claim: '', explanation: '', evidence: [] };
-      o.args.push(a);
+      outlineFor().args.push(a);
       ui.editingArg = a.id; ui.newArgId = a.id;
       refresh();
       const form = $('#argForm-' + a.id); if (form) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1418,10 +3015,10 @@
     'delete-arg': (el) => {
       const o = outlineFor();
       const a = o.args.find(x => x.id === el.dataset.id);
-      if (!a || !confirm(`Delete the section “${a.claim || 'Untitled'}”?`)) return;
+      if (!a || !confirm(t('b.confirmDel', { t: L(a.claim) || t('b.untitled') }))) return;
       o.args = o.args.filter(x => x.id !== a.id);
-      touchProject(); logActivity('trash-2', `Deleted section "${a.claim}"`); commit(); refresh();
-      toast('Section deleted', { icon: 'trash-2' });
+      touchProject(); logActivity('trash-2', 'act.deletedSec', { t: truncate(L(a.claim), 50) }); commit(); refresh();
+      toast(t('b.deleted'), { icon: 'trash-2' });
     },
     'move-arg': (el) => {
       const o = outlineFor();
@@ -1441,9 +3038,12 @@
 
     // Settings
     'reset-demo': () => {
-      if (!confirm('Reset all projects, saved evidence and outlines to the original sample data?')) return;
-      state = seedState(); resetLibraryFilters(); persist();
-      toast('Demo data restored', { icon: 'rotate-ccw' });
+      if (!confirm(t('set.resetConfirm'))) return;
+      const lang = state.lang;
+      state = seedState(); state.lang = lang; state.seenLanding = true; state.tourDone = true;
+      PASSAGES.clear(); idb.clear().catch(() => {});
+      resetLibraryFilters(); persist();
+      toast(t('set.resetDone'), { icon: 'rotate-ccw' });
       navigate('dashboard');
     }
   };
@@ -1455,28 +3055,30 @@
     ui.newArgId = null;
   }
 
-  // Click delegation
   document.addEventListener('click', (ev) => {
     const el = ev.target.closest('[data-action]');
     if (!el || el.disabled) return;
     const fn = actions[el.dataset.action];
-    if (fn) {
-      if (el.tagName === 'A' && el.getAttribute('href') === null) ev.preventDefault();
-      fn(el, ev);
-    }
+    if (fn) fn(el, ev);
   });
 
-  // Keyboard activation for card-like role="button" elements
   document.addEventListener('keydown', (ev) => {
+    if (tour) {
+      if (ev.key === 'Escape') { endTour(false); return; }
+      if (ev.key === 'ArrowRight') { actions['tour-next'](); return; }
+      if (ev.key === 'ArrowLeft') { actions['tour-back'](); return; }
+    }
     if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('.project-card[role="button"]')) {
       ev.preventDefault(); ev.target.click();
     }
     if (ev.key === 'Escape') {
-      if (!$('#projectModal').hidden) closeModal();
-      else if (ui.mapSelected && currentPage() === 'map') { ui.mapSelected = null; drawMap(); }
+      if ($('#srcModal') && !$('#srcModal').hidden) closeSourceEditor();
+      else if (!$('#projectModal').hidden) closeModal();
+      else if (!$('#refModal').hidden) closeRefs();
+      else if ((ui.mapSelected || ui.linkFrom || ui.linkDraft) && currentPage() === 'map') { ui.mapSelected = null; ui.linkFrom = null; ui.linkDraft = null; drawMap(); }
       closeSidebar();
     }
-    if (ev.key === '/' && !ev.target.matches('input, textarea, select, [contenteditable]')) {
+    if (ev.key === '/' && currentPage() !== 'home' && !ev.target.matches('input, textarea, select, [contenteditable]')) {
       ev.preventDefault(); $('#globalSearch').focus();
     }
     if (ev.key === 'Enter' && !ev.shiftKey && ev.target.id === 'askInput') {
@@ -1484,29 +3086,67 @@
     }
   });
 
-  // Inputs
   document.addEventListener('input', (ev) => {
-    const t = ev.target;
-    if (t.id === 'libSearch') { ui.lib.query = t.value; renderEvidenceList(); }
-    if (t.id === 'projectSearch') { ui.projectSearch = t.value; renderProjectGrid(); }
-    if (t.id === 'askInput') { t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px'; }
-    if (t.id === 'pfTitle' && t.value.trim()) { $('#pfTitleError').hidden = true; t.closest('.field').classList.remove('invalid'); }
+    const el = ev.target;
+    if (el.id === 'libSearch') { ui.lib.query = el.value; renderEvidenceList(); }
+    if (el.id === 'projectSearch') { ui.projectSearch = el.value; renderProjectGrid(); }
+    if (el.closest && el.closest('#srcForm')) updateSourcePreview();
+    if (el.id === 'askInput') { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+    if (el.id === 'pfTitle' && el.value.trim()) { $('#pfTitleError').hidden = true; el.closest('.field').classList.remove('invalid'); }
   });
 
   document.addEventListener('change', (ev) => {
-    const t = ev.target;
-    if (t.id === 'projectSelect') { switchProject(t.value); refresh(); toast(`Switched to ${currentProject().title}`, { icon: 'folder-open' }); }
-    if (t.id === 'projectFiles') { addPendingFiles(t.files); t.value = ''; }
-    if (t.id === 'sourceUpload') { addSourcesToCurrent(t.files); t.value = ''; }
-    if (t.dataset.connFilter) { ui.mapFilters[t.dataset.connFilter] = t.checked; drawMap(); }
-    if (t.dataset.linkSelect && t.value) linkEvidence(t.dataset.linkSelect, t.value);
+    const el = ev.target;
+    if (el.id === 'projectSelect') { switchProject(el.value); refresh(); toast(t('proj.switched', { t: L(currentProject().title) }), { icon: 'folder-open' }); }
+    if (el.id === 'projectFiles') { addPendingFiles(el.files); el.value = ''; }
+    if (el.id === 'sourceUpload') { addSourcesToCurrent(el.files); el.value = ''; }
+    if (el.id === 'refStyleSel') { ui.refStyle = el.value; renderRefs(); }
+    if (el.id === 'themeName') {
+      const th = mapFor().themes.find(x => x.id === el.dataset.themeId);
+      if (th && el.value.trim()) { th.name = el.value.trim(); touchProject(); commit(); drawMap(); }
+    }
+    if (el.dataset.evTheme !== undefined) {
+      const m = mapFor();
+      if (el.value) m.assign[el.dataset.evTheme] = el.value; else delete m.assign[el.dataset.evTheme];
+      delete m.pos['e:' + el.dataset.evTheme];
+      touchProject(); commit(); drawMap();
+    }
+    if (el.id === 'setCite') updateCitePreview(el.value);
+    if (el.closest && el.closest('#srcForm')) updateSourcePreview();
+    if (el.dataset.connFilter) { ui.mapFilters[el.dataset.connFilter] = el.checked; drawMap(); }
+    if (el.dataset.linkSelect && el.value) linkEvidence(el.dataset.linkSelect, el.value);
   });
 
-  // Forms
   document.addEventListener('submit', (ev) => {
     const f = ev.target;
     ev.preventDefault();
     if (f.id === 'projectForm') createProject(f);
+    if (f.id === 'linkForm') {
+      const d = ui.linkDraft;
+      if (d) {
+        const type = (f.querySelector('input[name=type]:checked') || {}).value || 'different';
+        mapFor().links.push({ id: uid('l'), a: d.a, b: d.b, type, note: f.note.value.trim() });
+        logActivity('link-2', 'act.mapLink', { t: t('conn.' + type) });
+        touchProject(); commit();
+        toast(t('map.linkSaved'), { icon: 'link-2' });
+      }
+      ui.linkDraft = null;
+      drawMap();
+    }
+    if (f.id === 'srcForm') {
+      const src = currentProject().sources.find(s => s.id === ui.editingSource);
+      if (src) {
+        const draft = sourceFromForm();
+        Object.assign(src, draft);
+        if (!draft.org) delete src.org;
+        if (!draft.authors.length) src.authors = [];
+        touchProject(); commit();
+      }
+      closeSourceEditor();
+      refresh();
+      if (!$('#refModal').hidden) renderRefs();
+      toast(t('src.saved'), { icon: 'badge-check' });
+    }
     if (f.id === 'askForm') askQuestion($('#askInput').value);
     if (f.id === 'globalSearchForm') {
       ui.lib = { query: $('#globalSearch').value.trim(), theme: 'all', source: 'all', tab: 'all' };
@@ -1515,8 +3155,8 @@
     if (f.id === 'thesisForm') {
       outlineFor().thesis = f.thesis.value.trim();
       ui.editingThesis = false;
-      touchProject(); logActivity('target', 'Updated central argument'); commit(); refresh();
-      toast('Thesis saved');
+      touchProject(); logActivity('target', 'act.thesis'); commit(); refresh();
+      toast(t('b.thesisSaved'));
     }
     if (f.id && f.id.startsWith('argForm-')) {
       const a = outlineFor().args.find(x => x.id === f.dataset.id);
@@ -1526,40 +3166,39 @@
       const isNew = ui.newArgId === a.id;
       a.claim = claim; a.explanation = f.explanation.value.trim(); a.type = f.type.value;
       ui.editingArg = null; ui.newArgId = null;
-      touchProject(); logActivity('list-tree', `${isNew ? 'Added' : 'Edited'} section "${claim}"`); commit(); refresh();
-      toast(isNew ? 'Section added' : 'Section updated');
+      touchProject(); logActivity('list-tree', isNew ? 'act.addedSec' : 'act.editedSec', { t: truncate(claim, 50) }); commit(); refresh();
+      toast(t(isNew ? 'b.added' : 'b.updated'));
     }
     if (f.id === 'settingsForm') {
       const d = new FormData(f);
       state.user.name = (d.get('name') || '').trim() || 'Student';
       state.user.university = (d.get('university') || '').trim();
+      state.user.program = (d.get('program') || '').trim();
       state.user.citation = d.get('citation');
-      state.user.showAiLabels = !!d.get('showAiLabels');
+      state.lang = d.get('lang');
+      ui.answer = null;
       commit();
-      toast('Settings saved');
+      refresh();
+      toast(t('set.saved'));
     }
   });
 
   /* Modal dropzone drag & drop */
   const dz = $('#dropzone');
-  ['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.add('over'); }));
-  ['dragleave', 'drop'].forEach(t => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.remove('over'); }));
+  ['dragenter', 'dragover'].forEach(x => dz.addEventListener(x, (e) => { e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(x => dz.addEventListener(x, (e) => { e.preventDefault(); dz.classList.remove('over'); }));
   dz.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) addPendingFiles(e.dataTransfer.files); });
   $('#projectModal').addEventListener('mousedown', (e) => { if (e.target.id === 'projectModal') closeModal(); });
+  $('#refModal').addEventListener('mousedown', (e) => { if (e.target.id === 'refModal') closeRefs(); });
 
-  /* ---------- Argument Builder drag & drop ----------
-     - Drag a section by its handle to reorder.
-     - Drag a saved evidence item from the tray onto a section to link it. */
+  /* ---------- Argument Builder drag & drop ---------- */
   let drag = null;
-
   document.addEventListener('mousedown', (e) => {
     const handle = e.target.closest('.arg-handle');
     const card = handle && handle.closest('.arg-card:not(.arg-form)');
     if (card) card.setAttribute('draggable', 'true');
   });
-  document.addEventListener('mouseup', () => {
-    if (!drag) $$('.arg-card[draggable]').forEach(c => c.removeAttribute('draggable'));
-  });
+  document.addEventListener('mouseup', () => { if (!drag) $$('.arg-card[draggable]').forEach(c => c.removeAttribute('draggable')); });
 
   document.addEventListener('dragstart', (e) => {
     const trayItem = e.target.closest && e.target.closest('[data-drag-evidence]');
@@ -1576,35 +3215,30 @@
       requestAnimationFrame(() => card.classList.add('dragging'));
     }
   });
-
   document.addEventListener('dragover', (e) => {
     if (!drag) return;
     if (drag.kind === 'evidence') {
       const card = e.target.closest('.arg-card:not(.arg-form)');
       $$('.arg-card.drop-target').forEach(c => { if (c !== card) c.classList.remove('drop-target'); });
       if (card) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; card.classList.add('drop-target'); }
-    } else if (drag.kind === 'arg') {
+    } else {
       const list = $('#argList');
-      if (!list || !list.contains(e.target) && e.target !== list) return;
+      if (!list || !list.contains(e.target)) return;
       e.preventDefault();
       const dragging = $('.arg-card.dragging');
       if (!dragging) return;
-      const after = $$('.arg-card:not(.dragging)', list).find(c => {
-        const box = c.getBoundingClientRect();
-        return e.clientY < box.top + box.height / 2;
-      });
+      const after = $$('.arg-card:not(.dragging)', list).find(c => { const b = c.getBoundingClientRect(); return e.clientY < b.top + b.height / 2; });
       if (after) list.insertBefore(dragging, after); else list.appendChild(dragging);
     }
   });
-
   document.addEventListener('drop', (e) => {
     if (!drag) return;
+    e.preventDefault();
     if (drag.kind === 'evidence') {
       const card = e.target.closest('.arg-card:not(.arg-form)');
-      if (card) { e.preventDefault(); linkEvidence(card.dataset.id, drag.id); }
-    } else e.preventDefault();
+      if (card) linkEvidence(card.dataset.id, drag.id);
+    }
   });
-
   document.addEventListener('dragend', () => {
     if (!drag) return;
     if (drag.kind === 'arg') {
@@ -1612,7 +3246,7 @@
       const o = outlineFor();
       const before = o.args.map(a => a.id).join();
       o.args.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-      if (before !== o.args.map(a => a.id).join()) { touchProject(); commit(); toast('Sections reordered', { icon: 'list-tree' }); }
+      if (before !== o.args.map(a => a.id).join()) { touchProject(); commit(); toast(t('b.reordered'), { icon: 'list-tree' }); }
     }
     drag = null;
     $$('.dragging, .drop-target').forEach(el => el.classList.remove('dragging', 'drop-target'));
@@ -1621,5 +3255,8 @@
 
   /* ---------- Boot ---------- */
   window.addEventListener('hashchange', () => renderPage());
+  window.addEventListener('resize', () => { if (tour) positionTour(); });
+  window.addEventListener('scroll', () => { if (tour) positionTour(); }, { passive: true });
   renderPage();
+  loadStoredPassages();
 })();
