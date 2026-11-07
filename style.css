@@ -1137,3 +1137,6 @@ code {
 #srcForm.is-web div.field.web-only { display: flex; }
 #srcForm.is-web .field-row.web-only { display: grid; }
 #srcForm.is-web .book-only { display: none; }
+
+/* Project sharing */
+.pc-tools { display: inline-flex; gap: 2px; }

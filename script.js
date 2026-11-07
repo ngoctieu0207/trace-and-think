@@ -137,6 +137,13 @@
     'proj.confirmDelete': ['Delete “{t}”? Its PDFs, saved quotes, map and outline will be removed from this browser.', 'Bạn có chắc muốn xoá “{t}”? Tài liệu, đoạn trích, sơ đồ và dàn ý của dự án này sẽ bị xoá khỏi trình duyệt.'],
     'proj.deleted': ['Project deleted', 'Đã xoá dự án'],
     'proj.switched': ['Now working on {t}', 'Đã chuyển sang dự án {t}'],
+    'share.export': ['Share as a file', 'Chia sẻ bằng tệp'],
+    'share.import': ['Import project', 'Nhập dự án'],
+    'share.exported': ['Project saved as a file. Send it to your group; they open it with Import project.', 'Đã lưu dự án thành tệp. Bạn gửi tệp cho nhóm, các bạn mở bằng nút Nhập dự án.'],
+    'share.imported': ['Opened “{t}”', 'Đã mở dự án “{t}”'],
+    'share.bad': ['This file is not a Trace & Think project.', 'Tệp này không phải dự án Trace & Think.'],
+    'share.replaceConfirm': ['You already have “{t}”. Replace it with the version in this file?', 'Bạn đã có dự án “{t}”. Bạn có muốn thay bằng phiên bản trong tệp này không?'],
+    'act.imported': ['Imported “{t}”', 'Đã nhập dự án “{t}”'],
 
     // Evidence library
     'lib.sub': ['Ask your PDFs a question or search them. Keep the quotes you need, each one tied to its file and page.', 'Bạn có thể đặt câu hỏi hoặc tìm kiếm trong các tài liệu PDF. Mỗi đoạn trích bạn lưu đều ghi rõ tên tài liệu và số trang.'],
@@ -1172,7 +1179,10 @@
       <article class="project-card ${isCurrent ? 'current' : ''}" data-action="open-project" data-id="${p.id}" tabindex="0" role="button" aria-label="${esc(title)}">
         <div class="pc-top">
           ${p.course ? `<span class="course-tag">${esc(p.course)}</span>` : '<span></span>'}
-          ${deletable ? `<button class="icon-btn sm danger pc-delete" data-action="delete-project" data-id="${p.id}" aria-label="${t('proj.delete')}"><i data-lucide="trash-2"></i></button>` : ''}
+          ${deletable ? `<span class="pc-tools">
+            <button class="icon-btn sm pc-delete" data-action="export-project" data-id="${p.id}" title="${t('share.export')}" aria-label="${t('share.export')}"><i data-lucide="share-2"></i></button>
+            <button class="icon-btn sm danger pc-delete" data-action="delete-project" data-id="${p.id}" aria-label="${t('proj.delete')}"><i data-lucide="trash-2"></i></button>
+          </span>` : ''}
         </div>
         <h3>${esc(title)}</h3>
         <p class="pc-q">${esc(L(p.question) || L(p.description) || t('proj.noQuestion'))}</p>
@@ -1337,7 +1347,10 @@
     $('#page-projects').innerHTML = `
       <div class="page-header">
         <div><h1>${t('nav.projects')}</h1><p>${t('proj.sub')}</p></div>
-        <div class="actions"><button class="btn btn-primary" data-action="open-new-project"><i data-lucide="plus"></i>${t('proj.new')}</button></div>
+        <div class="actions">
+          <button class="btn btn-outline" data-action="import-project"><i data-lucide="file-down"></i>${t('share.import')}</button>
+          <button class="btn btn-primary" data-action="open-new-project"><i data-lucide="plus"></i>${t('proj.new')}</button>
+        </div>
       </div>
       <div class="toolbar">
         <label class="search-input"><i data-lucide="search"></i><input id="projectSearch" type="search" placeholder="${t('proj.search')}" value="${esc(ui.projectSearch)}" /></label>
@@ -2242,6 +2255,71 @@
     if (el) { el.innerHTML = sourceListHTML(currentProject()); icons(); }
     const all = $('#countAll');
     if (all && isUserProject()) all.textContent = passageTotal();
+  }
+
+  /* ---------- Sharing a project as a file ----------
+     Everything a teammate needs (sources' extracted text, saved quotes, map and outline) goes into one JSON file. */
+  const fileSafe = (s) => String(s || 'project').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+
+  function exportProject(pid) {
+    const p = state.projects.find(x => x.id === pid);
+    if (!p) return;
+    const pack = {
+      app: 'trace-and-think', format: 1, exportedAt: new Date().toISOString(),
+      project: p,
+      saved: state.saved[pid] || [],
+      outline: state.outlines[pid] || null,
+      map: state.maps[pid] || null,
+      evidence: state.userEvidence[pid] || {},
+      passages: p.sources.map(s => PASSAGES.get(s.id)).filter(Boolean)
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(pack)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileSafe(L(p.title))}.trace-think.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(t('share.exported'), { icon: 'share-2' });
+  }
+
+  async function importProject(file) {
+    let pack = null;
+    try { pack = JSON.parse(await file.text()); } catch (e) { /* not JSON */ }
+    if (!pack || pack.app !== 'trace-and-think' || !pack.project || !Array.isArray(pack.project.sources)) {
+      toast(t('share.bad'), { icon: 'triangle-alert', type: 'warn' });
+      return;
+    }
+    const p = pack.project;
+    if (state.projects.some(x => x.id === p.id)) {
+      if (!confirm(t('share.replaceConfirm', { t: L(p.title) }))) return;
+      state.projects = state.projects.filter(x => x.id !== p.id);
+    }
+    const recs = new Map((pack.passages || []).filter(r => r && r.sourceId && Array.isArray(r.passages)).map(r => [r.sourceId, r]));
+    for (const rec of recs.values()) {
+      PASSAGES.set(rec.sourceId, rec);
+      try { await idb.put(rec); } catch (e) { /* keep in memory */ }
+    }
+    p.sources.forEach(s => {
+      delete s.progress; delete s.ocr;
+      if (recs.has(s.id)) { s.status = 'ready'; s.passageCount = recs.get(s.id).passages.length; }
+      else if (s.status === 'ready' || s.status === 'reading') s.status = 'missing';
+    });
+    p.updated = Date.now();
+    state.projects.unshift(p);
+    state.saved[p.id] = pack.saved || [];
+    if (pack.outline) state.outlines[p.id] = pack.outline;
+    if (pack.map) state.maps[p.id] = pack.map;
+    state.userEvidence[p.id] = pack.evidence || {};
+    state.currentProjectId = p.id;
+    resetLibraryFilters();
+    indexCache.key = '';
+    logActivity('file-down', 'act.imported', { t: L(p.title) }, p.id);
+    commit();
+    toast(t('share.imported', { t: L(p.title) }), { icon: 'file-down' });
+    navigate('dashboard');
   }
 
   /* ---------- Reference list modal ---------- */
@@ -3228,6 +3306,8 @@
       switchProject(el.dataset.id);
       navigate(el.dataset.goto || 'evidence');
     },
+    'export-project': (el, ev) => { ev.stopPropagation(); exportProject(el.dataset.id); },
+    'import-project': () => $('#projectImport').click(),
     'delete-project': (el, ev) => {
       ev.stopPropagation();
       const p = state.projects.find(x => x.id === el.dataset.id);
@@ -3439,6 +3519,7 @@
     if (el.id === 'projectSelect') { switchProject(el.value); refresh(); toast(t('proj.switched', { t: L(currentProject().title) }), { icon: 'folder-open' }); }
     if (el.id === 'projectFiles') { addPendingFiles(el.files); el.value = ''; }
     if (el.id === 'sourceUpload') { addSourcesToCurrent(el.files); el.value = ''; }
+    if (el.id === 'projectImport') { if (el.files[0]) importProject(el.files[0]); el.value = ''; }
     if (el.id === 'refStyleSel') { ui.refStyle = el.value; renderRefs(); }
     if (el.id === 'themeName') {
       const th = mapFor().themes.find(x => x.id === el.dataset.themeId);
