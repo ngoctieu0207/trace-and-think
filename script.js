@@ -58,6 +58,29 @@
     'common.edited': ['Edited {t}', 'Cập nhật {t}'],
     'common.active': ['Open', 'Đang mở'],
     'common.page': ['p. {n}', 'tr. {n}'],
+    'common.part': ['part {n}', 'đoạn {n}'],
+    'lib.addLink': ['Add link or text', 'Thêm link hoặc văn bản'],
+    'link.title': ['Add a web source', 'Thêm nguồn từ web'],
+    'link.sub': ['Paste a link to an online article or report, or paste the text itself.', 'Dán link bài báo hoặc báo cáo trực tuyến, hoặc dán trực tiếp nội dung văn bản.'],
+    'link.tabUrl': ['Link', 'Link'],
+    'link.tabText': ['Paste text', 'Dán văn bản'],
+    'link.url': ['Link to the article or report', 'Link bài báo hoặc báo cáo'],
+    'link.urlHint': ['The page is read through Jina Reader (r.jina.ai). Links to PDF files work too. Pages behind a login cannot be read; paste the text instead.', 'Trang được đọc thông qua Jina Reader (r.jina.ai). Link tới file PDF cũng dùng được. Trang yêu cầu đăng nhập sẽ không đọc được, khi đó bạn hãy dán nội dung văn bản.'],
+    'link.name': ['Name', 'Tên nguồn'],
+    'link.namePh': ['e.g. UNESCO report on wayang', 'Ví dụ: Báo cáo của UNESCO về wayang'],
+    'link.text': ['Text', 'Nội dung'],
+    'link.textPh': ['Paste the text of the article here…', 'Dán nội dung bài viết vào đây…'],
+    'link.add': ['Add source', 'Thêm nguồn'],
+    'link.badUrl': ['That doesn’t look like a valid link.', 'Link này không hợp lệ.'],
+    'link.tooShort': ['Please paste a bit more text (at least a paragraph).', 'Bạn hãy dán nhiều nội dung hơn (ít nhất một đoạn văn).'],
+    'link.reading': ['Reading the page…', 'Đang đọc trang web…'],
+    'src.tWeb': ['Web page or online report', 'Trang web hoặc báo cáo trực tuyến'],
+    'src.site': ['Website name', 'Tên trang web'],
+    'src.accessed': ['Date accessed', 'Ngày truy cập'],
+    'src.webFailed': ['Couldn’t read {f}. Try pasting the text instead.', 'Không thể đọc {f}. Bạn hãy thử dán nội dung văn bản.'],
+    'src.pastedName': ['Pasted text', 'Văn bản đã dán'],
+    'act.addedLink': ['Added a link from {f}', 'Đã thêm link từ {f}'],
+    'act.addedText': ['Added “{f}”', 'Đã thêm “{f}”'],
     'common.clearFilters': ['Clear filters', 'Xoá bộ lọc'],
 
     // Time
@@ -117,13 +140,13 @@
 
     // Evidence library
     'lib.sub': ['Ask your PDFs a question or search them. Keep the quotes you need, each one tied to its file and page.', 'Bạn có thể đặt câu hỏi hoặc tìm kiếm trong các tài liệu PDF. Mỗi đoạn trích bạn lưu đều ghi rõ tên tài liệu và số trang.'],
-    'lib.addPdf': ['Add PDF', 'Thêm PDF'],
+    'lib.addPdf': ['Add files', 'Thêm tệp'],
     'lib.refList': ['Reference list', 'Danh mục tham khảo'],
-    'lib.realNotice': ['Your PDFs are read here in the browser and never leave your computer. Scanned pages are read with OCR.', 'Tài liệu PDF được đọc ngay trên trình duyệt và không được gửi đến máy chủ nào. Với trang scan, web dùng công nghệ OCR để nhận dạng chữ.'],
+    'lib.realNotice': ['Add PDFs, Word or .txt files, a link to an online article, or pasted text. Files are read here in the browser and never leave your computer; scanned pages are read with OCR.', 'Bạn có thể thêm tệp PDF, Word, .txt, link bài báo trực tuyến hoặc dán văn bản. Tệp được đọc ngay trên trình duyệt và không được gửi đến máy chủ nào; trang scan được nhận dạng bằng OCR.'],
     'lib.sources': ['Your PDFs', 'Tài liệu PDF'],
     'lib.allSources': ['All files', 'Tất cả tài liệu'],
     'lib.allSourcesSub': ['Search everything', 'Tìm trong mọi tài liệu'],
-    'lib.upload': ['Add PDFs', 'Thêm PDF'],
+    'lib.upload': ['Add files', 'Thêm tệp'],
     'lib.ask': ['Ask your PDFs', 'Đặt câu hỏi'],
     'lib.askSub': ['You’ll get the sentences from your files that answer it best, with page numbers.', 'Web sẽ trích những câu trong tài liệu trả lời sát nhất với câu hỏi, kèm số trang.'],
     'lib.askPh': ['e.g. How did wayang kulit influence Indonesian culture?', 'Ví dụ: How did wayang kulit influence Indonesian culture?'],
@@ -141,7 +164,7 @@
     'lib.startT': ['Search inside your PDFs', 'Tìm trong tài liệu PDF'],
     'lib.startS': ['Ask a question above or type a few keywords. Matching passages show up here with page numbers.', 'Bạn hãy đặt câu hỏi ở trên hoặc nhập vài từ khoá. Các đoạn phù hợp sẽ hiện ở đây kèm số trang.'],
     'lib.noTextT': ['No readable PDFs yet', 'Chưa có tài liệu nào đọc được'],
-    'lib.noTextS': ['Add the PDFs for this assignment. Normal PDFs take a few seconds, scanned ones a bit longer.', 'Bạn hãy thêm tài liệu PDF cho bài tập này. Tài liệu thông thường được đọc trong vài giây, tài liệu scan sẽ mất thêm thời gian.'],
+    'lib.noTextS': ['Add the PDFs, Word files or links for this assignment. Normal files take a few seconds, scanned PDFs a bit longer.', 'Bạn hãy thêm tệp PDF, Word hoặc link cho bài tập này. Tệp thông thường được đọc trong vài giây, PDF scan sẽ mất thêm thời gian.'],
     'lib.thinking': ['Looking through {n} files…', 'Đang tìm trong {n} tài liệu…'],
     'lib.pdfAnswer': ['From your PDFs', 'Trích từ tài liệu của bạn'],
     'lib.pdfNote': ['These are exact sentences from your files, ranked on your computer. Nothing is made up, but do read the full quote before citing it.', 'Đây là nguyên văn các câu trong tài liệu, được xếp hạng ngay trên máy của bạn. Web không tự tạo nội dung, tuy vậy bạn nên đọc kỹ cả đoạn trước khi trích dẫn.'],
@@ -150,7 +173,7 @@
     'lib.supporting': ['Where it comes from ({n})', 'Nguồn trích ({n})'],
     'lib.dismiss': ['Close answer', 'Đóng câu trả lời'],
     'lib.pdfAdded': ['Added {n} PDF(s) to {t}', 'Đã thêm {n} tài liệu vào {t}'],
-    'lib.skipped': ['Skipped {n} file(s). Only PDFs work here.', 'Đã bỏ qua {n} tệp vì web chỉ hỗ trợ PDF.'],
+    'lib.skipped': ['Skipped {n} file(s). Only PDF, Word (.docx) and .txt files work here.', 'Đã bỏ qua {n} tệp vì web chỉ hỗ trợ PDF, Word (.docx) và .txt.'],
 
     // Evidence card
     'ev.save': ['Save', 'Lưu'],
@@ -381,7 +404,7 @@
     'modal.desc': ['Notes', 'Ghi chú'],
     'modal.descPh': ['Anything you want to remember about this assignment', 'Những điều bạn cần lưu ý về bài tập này'],
     'modal.sources': ['PDFs', 'Tài liệu PDF'],
-    'modal.drop': ['Drop PDFs here or browse', 'Kéo tài liệu PDF vào đây hoặc chọn từ máy'],
+    'modal.drop': ['Drop PDF, Word or .txt files here, or browse', 'Kéo tệp PDF, Word hoặc .txt vào đây hoặc chọn từ máy'],
     'modal.dropHint': ['Read on your computer, never uploaded anywhere', 'Tài liệu được đọc ngay trên máy và không được tải lên mạng'],
     'modal.create': ['Create', 'Tạo dự án'],
     'modal.created': ['Created “{t}”', 'Đã tạo dự án “{t}”'],
@@ -500,7 +523,7 @@
     'g.projects.2': ['Search by name or course', 'Tìm theo tên hoặc mã môn'],
     'g.projects.3': ['Bin to delete', 'Bấm thùng rác để xoá'],
     'g.evidence.t': ['Quick guide', 'Hướng dẫn nhanh'],
-    'g.evidence.1': ['Add your PDFs', 'Thêm tài liệu PDF'],
+    'g.evidence.1': ['Add PDFs, files or links', 'Thêm PDF, tệp hoặc link'],
     'g.evidence.2': ['Ask or type keywords', 'Đặt câu hỏi hoặc nhập từ khoá'],
     'g.evidence.3': ['Save what you need', 'Lưu đoạn trích cần dùng'],
     'g.evidence.4': ['Orange icon: add author, year', 'Biểu tượng cam: thêm tác giả và năm'],
@@ -556,7 +579,7 @@
   }
   function hasMeta(src) { return !!(src.org || (src.authors && src.authors.length)); }
   /* A source is "complete" when it has a creator and a year, otherwise the student is prompted to add details */
-  const isComplete = (src) => hasMeta(src) && !!src.year;
+  const isComplete = (src) => (src.type === 'web' ? !!src.title : hasMeta(src) && !!src.year);
   const shortTitle = (title) => {
     const words = (title || '').split(/\s+/);
     return words.length > 6 ? words.slice(0, 6).join(' ') + '…' : title;
@@ -580,6 +603,7 @@
 
   /** In-text citation, e.g. RMIT Harvard → (Hartley and Chen 2022:9). Pass html=true to get italics for titles. */
   function inText(src, page, style = state.user.citation, n = 1, html = false) {
+    if (src.kind && src.kind !== 'pdf') page = null;   // web pages and Word files have no page numbers
     const year = src.year || 'n.d.';
     const who = citeWho(src, style, html);
     switch (style) {
@@ -616,11 +640,26 @@
     // volume(issue) helpers
     const vi = (sepIssue = '') => (v ? `${v}${iss ? `${sepIssue}(${iss})` : ''}` : iss ? `(${iss})` : '');
 
+    if (type === 'web') {   // web page or online report
+      const site = esc(src.site || '');
+      const url = esc(src.url || '');
+      const acc = src.accessed ? new Date(src.accessed + 'T00:00:00') : null;
+      const accLong = acc ? acc.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+      switch (style) {
+        case 'apa7': return `${who ? `${who} (${y}). <i>${T}</i>.` : `<i>${T}</i>. (${y}).`}${site && site !== who ? ` ${site}.` : ''} ${url}`;
+        case 'ieee': return `[${n}] ${who ? who + ', ' : ''}“${T},” ${site}${y !== 'n.d.' ? `, ${y}` : ''}. [Online]. Available: ${url}${accLong ? ` (accessed ${accLong})` : ''}.`;
+        case 'chicago': return `${who ? `${who}. ${y}. “${T}.”` : `“${T}.” ${y}.`} ${site}. ${url}.`;
+        case 'vancouver': return `${n}. ${who ? who + '. ' : ''}${T} [Internet]. ${site}; ${y}${accLong ? ` [cited ${accLong}]` : ''}. Available from: ${url}`;
+        case 'aglc4': return `${who ? who + ', ' : ''}‘${T}’, <i>${site}</i> (Web Page${y !== 'n.d.' ? `, ${y}` : ''}) &lt;${url}&gt;`;
+        default: return `${who || `<i>${T}</i>`} (${y})${who ? ` <i>${T}</i>` : ''}${site ? `, ${site}` : ''}${accLong ? `, accessed ${accLong}` : ''}. ${url}`;
+      }
+    }
+
     if (type === 'article') {
       switch (style) {
-        case 'apa7': return `${who ? who + ' ' : ''}(${y}). ${T}. <i>${J}</i>${v ? `, <i>${v}</i>${iss ? `(${iss})` : ''}` : ''}${r ? `, ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
+        case 'apa7': return `${who ? `${who} (${y}). ${T}.` : `${T}. (${y}).`} <i>${J}</i>${v ? `, <i>${v}</i>${iss ? `(${iss})` : ''}` : ''}${r ? `, ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
         case 'ieee': return `[${n}] ${who ? who + ', ' : ''}“${T},” <i>${J}</i>${v ? `, vol. ${v}` : ''}${iss ? `, no. ${iss}` : ''}${r ? `, pp. ${r}` : ''}, ${y}${doi ? `, doi: ${esc(doi)}` : ''}.`;
-        case 'chicago': return `${who ? who + '. ' : ''}${y}. “${T}.” <i>${J}</i>${v ? ` ${v}` : ''}${iss ? ` (${iss})` : ''}${r ? `: ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}.` : ''}`;
+        case 'chicago': return `${who ? `${who}. ${y}. “${T}.”` : `“${T}.” ${y}.`} <i>${J}</i>${v ? ` ${v}` : ''}${iss ? ` (${iss})` : ''}${r ? `: ${r}` : ''}.${doi ? ` https://doi.org/${esc(doi)}.` : ''}`;
         case 'vancouver': return `${n}. ${who ? who + '. ' : ''}${T}. ${esc(src.jAbbr || src.journal || '')}. ${y}${vi() ? `;${vi()}` : ''}${r ? `:${r.replace('–', '-')}` : ''}.${doi ? ` doi:${esc(doi)}` : ''}`;
         case 'aglc4': return `${who ? who + ', ' : ''}‘${T}’ (${y})${vi() ? ' ' + vi() : ''} <i>${J}</i>${r ? ' ' + r.split(/[–-]/)[0] : ''}`;
         default: return `${who || `<i>${T}</i>`} (${y})${who ? ` ‘${T}’,` : ''} <i>${J}</i>${vi() ? `, ${vi()}` : ''}${r ? `:${r}` : ''}${doi ? `, doi:${esc(doi)}` : ''}.`;
@@ -628,9 +667,9 @@
     }
     // Book or report (organisation or authors)
     switch (style) {
-      case 'apa7': return `${who ? who + ' ' : ''}(${y}). <i>${T}</i>.${pub && pub !== esc(src.org || '') ? ` ${pub}.` : ''}${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
+      case 'apa7': return `${who ? `${who} (${y}). <i>${T}</i>.` : `<i>${T}</i>. (${y}).`}${pub && pub !== esc(src.org || '') ? ` ${pub}.` : ''}${doi ? ` https://doi.org/${esc(doi)}` : ''}`;
       case 'ieee': return `[${n}] ${who ? who + ', ' : ''}<i>${T}</i>.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')},` : ''} ${y}.`;
-      case 'chicago': return `${who ? who + '. ' : ''}${y}. <i>${T}</i>.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')}.` : ''}`;
+      case 'chicago': return `${who ? `${who}. ${y}. <i>${T}</i>.` : `<i>${T}</i>. ${y}.`}${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')}.` : ''}`;
       case 'vancouver': return `${n}. ${who ? who + '. ' : ''}${T}.${pl || pub ? ` ${[pl, pub].filter(Boolean).join(': ')};` : ''} ${y}.`;
       case 'aglc4': return `${who ? who + ', ' : ''}<i>${T}</i> (${[type === 'report' ? 'Report' : pub, y].filter(Boolean).join(', ')})`;
       default: return `${who || `<i>${T}</i>`} (${y})${who ? ` <i>${T}</i>` : ''}${pub ? `, ${pub}` : ''}${pl ? `, ${pl}` : ''}.`;
@@ -743,7 +782,7 @@
   }
 
   function fileToTitle(name) {
-    return name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return name.replace(/\.(pdf|docx|txt|md)$/i, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
   function formatSize(bytes) {
     if (!bytes && bytes !== 0) return '';
@@ -1172,7 +1211,7 @@
         </blockquote>
         <footer class="ev-foot">
           <span class="ev-src" title="${esc(src.title)}"><i data-lucide="file-text"></i><span>${esc(src.file)}</span></span>
-          <span class="page-pill">${t('common.page', { n: ev.page })}</span>
+          <span class="page-pill">${locLabel(ev)}</span>
           <span class="ev-cite" title="${CITATION_STYLES[state.user.citation].label}">${inText(src, ev.page, state.user.citation, sourceNumber(src), true)}</span>
           <span class="ev-actions">
             ${!isComplete(src) ? `<button class="link-btn warn" data-action="edit-source" data-id="${src.id}"><i data-lucide="pencil"></i>${t('src.addDetails')}</button>` : ''}
@@ -1328,6 +1367,7 @@
         <div class="actions">
           <button class="btn btn-outline" data-action="open-refs"><i data-lucide="book-marked"></i>${t('lib.refList')}</button>
           <button class="btn btn-outline" data-action="upload-source"><i data-lucide="file-up"></i>${t('lib.addPdf')}</button>
+          <button class="btn btn-outline" data-action="add-link"><i data-lucide="link"></i>${t('lib.addLink')}</button>
         </div>
       </div>
 
@@ -1337,7 +1377,7 @@
         <aside class="panel sources-panel">
           <div class="panel-head"><h3>${t('lib.sources')}</h3><span class="count-pill">${p.sources.length}</span></div>
           <div class="source-list" id="sourceList">${sourceListHTML(p)}</div>
-          <div class="upload-row"><button class="upload-btn" data-action="upload-source"><i data-lucide="upload"></i>${t('lib.upload')}</button></div>
+          <div class="upload-row"><button class="upload-btn" data-action="upload-source"><i data-lucide="upload"></i>${t('lib.upload')}</button><button class="upload-btn" data-action="add-link"><i data-lucide="link"></i>${t('lib.addLink')}</button></div>
         </aside>
 
         <div class="library-main">
@@ -1595,9 +1635,15 @@
   }
   const splitSentences = (text) => (text.match(/[^.!?。]+[.!?。]+["”’)\]]*|[^.!?。]+$/g) || [text]).map(s => s.trim()).filter(Boolean);
 
+  /* Read files one after another. PDFs go to PDF.js; Word and text files are read as plain text. */
   function queueRead(pid, src, file) {
     src.status = 'reading'; src.progress = 0;
-    readQueue = readQueue.then(() => readPdf(pid, src, file)).catch(err => console.warn(err));
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    let job;
+    if (ext === 'docx') { src.kind = 'doc'; job = () => readTextSource(pid, src, () => textFromDocx(file)); }
+    else if (ext === 'txt' || ext === 'md') { src.kind = 'doc'; job = () => readTextSource(pid, src, () => file.text()); }
+    else { src.kind = 'pdf'; job = () => readPdf(pid, src, file); }
+    readQueue = readQueue.then(job).catch(err => console.warn(err));
   }
 
   async function readPdf(pid, src, file) {
@@ -1655,31 +1701,198 @@
         passages.sort((a, b) => a.page - b.page).forEach((p, i) => { p.i = i; });
       }
 
-      const rec = { sourceId: src.id, passages };
-      PASSAGES.set(src.id, rec);
-      try { await idb.put(rec); } catch (e) { /* storage full or blocked, keep in memory */ }
-      src.passageCount = passages.length;
-      src.ocrPages = ocrUsed;
-      src.status = passages.length ? 'ready' : 'no-text';
-      if (!foundDoi && passages.length) foundDoi = findDoi(passages.slice(0, 6).map(x => x.text).join(' '));
-      if (foundDoi && !src.doiChecked) {
-        src.doiChecked = true;
-        const ok = await applyDoi(src, foundDoi);
-        if (ok) toast(t('src.doiFound', { f: src.file }), { icon: 'badge-check' });
-      }
-      if (passages.length) toast(t(ocrUsed ? 'src.doneOcr' : 'src.done', { f: src.file, n: passages.length }), { icon: 'file-check' });
-      else toast(t('src.failed', { f: src.file }), { icon: 'triangle-alert', type: 'warn' });
+      await storePassages(src, passages, ocrUsed, foundDoi);
     } catch (err) {
       console.warn('PDF read failed', err);
       src.status = 'error';
       toast(t('src.failed', { f: src.file }), { icon: 'triangle-alert', type: 'warn' });
     }
+    afterRead(pid, src);
+  }
+
+  /* Save extracted passages, look up a DOI if there is one, and report the result */
+  async function storePassages(src, passages, ocrUsed = 0, foundDoi = null) {
+    const rec = { sourceId: src.id, passages };
+    PASSAGES.set(src.id, rec);
+    try { await idb.put(rec); } catch (e) { /* storage full or blocked, keep in memory */ }
+    src.passageCount = passages.length;
+    src.ocrPages = ocrUsed;
+    src.status = passages.length ? 'ready' : 'no-text';
+    if (!foundDoi && passages.length) foundDoi = findDoi(passages.slice(0, 6).map(x => x.text).join(' '));
+    if (foundDoi && !src.doiChecked) {
+      src.doiChecked = true;
+      const ok = await applyDoi(src, foundDoi);
+      if (ok) toast(t('src.doiFound', { f: src.file }), { icon: 'badge-check' });
+    }
+    if (passages.length) toast(t(ocrUsed ? 'src.doneOcr' : 'src.done', { f: src.title || src.file, n: passages.length }), { icon: 'file-check' });
+    else toast(t('src.failed', { f: src.title || src.file }), { icon: 'triangle-alert', type: 'warn' });
+  }
+
+  function afterRead(pid, src) {
     delete src.progress; delete src.ocr;
     indexCache.key = '';
     touchProject(pid);
     persist();
     updateSourcesUI();
     if (currentPage() === 'evidence' && currentProject() && currentProject().id === pid) renderEvidenceList();
+  }
+
+  /* ---------- Sources that are not PDFs: web links, pasted text, Word and .txt files ----------
+     These have no page numbers, so each passage is numbered as a "part" instead. */
+  const READER_URL = 'https://r.jina.ai/';   // Jina Reader turns any public page into plain text, with CORS enabled
+  const MAMMOTH_URL = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+  const isPaged = (src) => !src || !src.kind || src.kind === 'pdf';
+  const locLabel = (ev) => t(isPaged(sourceOf(ev)) ? 'common.page' : 'common.part', { n: ev.page });
+
+  /* Turn the Markdown that Jina Reader returns into plain paragraphs */
+  function cleanMarkdown(md) {
+    return md
+      .replace(/!\[[^\]]*\]\((?:[^()]|\([^)]*\))*\)/g, ' ')        // images
+      .replace(/\[(\d+|[a-z]|citation needed)\]/gi, '')              // footnote markers, e.g. [1] or [[1]](url)
+      .replace(/\[([^\]]*)\]\((?:[^()]|\([^)]*\))*\)/g, '$1')      // links → their text
+      .replace(/\[\]\([^)\s]*\)?/g, '')                              // empty links left behind
+      .replace(/(\*\*|__|\*|_|`)/g, '')                              // emphasis and code marks
+      .replace(/https?:\/\/\S+/g, ' ')
+      .split('\n')
+      .map(line => line.trim())
+      // drop tables, headings and rules (menus, infoboxes)
+      .filter(line => line && !line.startsWith('|') && !/^#{1,6}\s/.test(line) && !/^[-=*_]{3,}$/.test(line))
+      .map(line => line.replace(/^([-+*]|\d+\.)\s+/, ''))
+      // keep real prose only: at least eight words with some punctuation
+      .filter(line => line.split(/\s+/).length >= 8 && /[.!?:;]/.test(line))
+      .join('\n\n');
+  }
+
+  /* Read a non-PDF source: getText returns the full text, or null if it handed over to readPdf */
+  async function readTextSource(pid, src, getText) {
+    src.status = 'reading'; src.progress = 10;
+    persist(); updateSourcesUI();
+    try {
+      const text = await getText();
+      if (text === null) return;
+      src.progress = 80; updateSourcesUI();
+      const passages = chunkPage(text).map((c, i) => ({ i, page: i + 1, text: c }));
+      await storePassages(src, passages, 0, findDoi(text.slice(0, 5000)));
+    } catch (err) {
+      console.warn('Read failed', err);
+      src.status = 'error';
+      toast(t(src.kind === 'web' ? 'src.webFailed' : 'src.failed', { f: src.title || src.file }), { icon: 'triangle-alert', type: 'warn' });
+    }
+    afterRead(pid, src);
+  }
+
+  async function textFromDocx(file) {
+    if (!window.mammoth) await loadScript(MAMMOTH_URL);
+    const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return result.value || '';
+  }
+
+  /* Fetch an online article or report. A direct PDF link is read with PDF.js so page numbers are kept. */
+  async function textFromUrl(pid, src) {
+    if (/\.pdf($|[?#])/i.test(src.url)) {
+      try {
+        const res = await withTimeout(fetch(src.url), 15000);
+        if (res.ok && /pdf/i.test(res.headers.get('content-type') || '')) {
+          const blob = await res.blob();
+          src.kind = 'pdf';
+          await readPdf(pid, src, new File([blob], src.file, { type: 'application/pdf' }));
+          return null;
+        }
+      } catch (e) { /* the site blocks direct downloads; fall back to the reader */ }
+    }
+    const res = await withTimeout(fetch(READER_URL + src.url, { headers: { Accept: 'text/plain' } }), 30000);
+    if (!res.ok) throw new Error('Reader returned ' + res.status);
+    const body = await res.text();
+    const title = (body.match(/^Title:\s*(.+)$/m) || [])[1];
+    const published = (body.match(/^Published Time:\s*(.+)$/m) || [])[1];
+    if (title && title.trim()) src.title = title.trim();
+    const year = published && published.match(/(19|20)\d{2}/);
+    if (year && !src.year) src.year = year[0];
+    const content = body.split(/^Markdown Content:\s*$/m)[1] || body;
+    return cleanMarkdown(content);
+  }
+
+  /* Add a web link or pasted text as a new source of the current project */
+  function addLinkOrTextSource({ url, title, text }) {
+    const p = currentProject();
+    if (!p) return;
+    let src;
+    if (url) {
+      let host = url;
+      try { host = new URL(url).hostname.replace(/^www\./, ''); } catch (e) { /* keep the raw text */ }
+      src = { id: uid('s'), kind: 'web', type: 'web', url, site: host, file: host, title: host, accessed: new Date().toISOString().slice(0, 10), pages: null, size: '', status: 'reading', progress: 0 };
+      p.sources.push(src);
+      readQueue = readQueue.then(() => readTextSource(p.id, src, () => textFromUrl(p.id, src))).catch(err => console.warn(err));
+      logActivity('link', 'act.addedLink', { f: host });
+    } else {
+      const name = (title || '').trim() || t('src.pastedName');
+      src = { id: uid('s'), kind: 'text', type: 'book', file: name, title: name, pages: null, size: '', status: 'reading', progress: 0 };
+      p.sources.push(src);
+      readQueue = readQueue.then(() => readTextSource(p.id, src, async () => text)).catch(err => console.warn(err));
+      logActivity('clipboard-paste', 'act.addedText', { f: name });
+    }
+    touchProject(); commit(); refresh();
+  }
+
+  /* Small modal for adding a link or pasting text, built on demand */
+  function openLinkModal() {
+    let modal = $('#linkModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.className = 'modal-backdrop';
+      modal.id = 'linkModal';
+      modal.addEventListener('mousedown', (e) => { if (e.target === modal) closeLinkModal(); });
+      document.body.appendChild(modal);
+    }
+    const tab = ui.linkTab || 'url';
+    modal.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="linkTitle">
+        <header class="modal-head">
+          <div><h2 id="linkTitle">${t('link.title')}</h2><p>${t('link.sub')}</p></div>
+          <button class="icon-btn" data-action="close-link" aria-label="${t('common.close')}"><i data-lucide="x"></i></button>
+        </header>
+        <form class="modal-body" id="linkForm2" novalidate>
+          <div class="tabs link-tabs">
+            <button type="button" class="tab ${tab === 'url' ? 'active' : ''}" data-action="link-tab" data-tab="url"><i data-lucide="link"></i>${t('link.tabUrl')}</button>
+            <button type="button" class="tab ${tab === 'text' ? 'active' : ''}" data-action="link-tab" data-tab="text"><i data-lucide="clipboard-paste"></i>${t('link.tabText')}</button>
+          </div>
+          ${tab === 'url' ? `
+            <div class="field"><label for="lkUrl">${t('link.url')}</label>
+              <input id="lkUrl" name="url" type="url" placeholder="https://..." autocomplete="off" />
+              <small class="hint">${t('link.urlHint')}</small></div>` : `
+            <div class="field"><label for="lkTitle">${t('link.name')}</label><input id="lkTitle" name="title" placeholder="${t('link.namePh')}" /></div>
+            <div class="field"><label for="lkText">${t('link.text')}</label><textarea id="lkText" name="text" rows="8" placeholder="${t('link.textPh')}"></textarea></div>`}
+          <small class="field-error" id="lkError" hidden></small>
+        </form>
+        <footer class="modal-foot">
+          <button class="btn btn-ghost" type="button" data-action="close-link">${t('common.cancel')}</button>
+          <button class="btn btn-primary" type="submit" form="linkForm2"><i data-lucide="plus"></i>${t('link.add')}</button>
+        </footer>
+      </div>`;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    icons();
+    setTimeout(() => { const first = $('#lkUrl') || $('#lkTitle'); if (first) first.focus(); }, 30);
+  }
+  function closeLinkModal() {
+    const m = $('#linkModal'); if (m) m.hidden = true;
+    document.body.style.overflow = '';
+  }
+  function submitLinkForm(f) {
+    const err = $('#lkError');
+    if (f.url) {
+      let url = f.url.value.trim();
+      if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+      try { new URL(url); } catch (e) { err.textContent = t('link.badUrl'); err.hidden = false; return; }
+      closeLinkModal();
+      addLinkOrTextSource({ url });
+      toast(t('link.reading'), { icon: 'link' });
+    } else {
+      const text = f.text.value.trim();
+      if (text.length < 80) { err.textContent = t('link.tooShort'); err.hidden = false; return; }
+      closeLinkModal();
+      addLinkOrTextSource({ title: f.title.value, text });
+    }
   }
 
   /* ---------- Reference details: PDF metadata, DOI → CrossRef, manual editing ---------- */
@@ -1779,6 +1992,7 @@
                 <option value="article" ${type === 'article' ? 'selected' : ''}>${t('src.tArticle')}</option>
                 <option value="book" ${type === 'book' ? 'selected' : ''}>${t('src.tBook')}</option>
                 <option value="report" ${type === 'report' ? 'selected' : ''}>${t('src.tReport')}</option>
+                <option value="web" ${type === 'web' ? 'selected' : ''}>${t('src.tWeb')}</option>
               </select></div>
             <div class="field"><label for="sfYear">${t('src.year')}</label><input id="sfYear" name="year" value="${esc(src.year || '')}" placeholder="2024" inputmode="numeric" /></div>
           </div>
@@ -1797,6 +2011,11 @@
             <div class="field"><label for="sfPub">${t('src.publisher')}</label><input id="sfPub" name="publisher" value="${esc(src.publisher || '')}" /></div>
             <div class="field"><label for="sfPlace">${t('src.place')}</label><input id="sfPlace" name="place" value="${esc(src.place || '')}" /></div>
           </div>
+          <div class="field-row web-only">
+            <div class="field"><label for="sfSite">${t('src.site')}</label><input id="sfSite" name="site" value="${esc(src.site || '')}" placeholder="BBC News" /></div>
+            <div class="field"><label for="sfAccessed">${t('src.accessed')}</label><input id="sfAccessed" name="accessed" type="date" value="${esc(src.accessed || '')}" /></div>
+          </div>
+          <div class="field web-only"><label for="sfUrl">URL</label><input id="sfUrl" name="url" type="url" value="${esc(src.url || '')}" /></div>
           <div class="src-preview" id="srcPreview"></div>
         </form>
         <footer class="modal-foot">
@@ -1826,7 +2045,8 @@
       type: d.type, year: (d.year || '').trim(), title: (d.title || '').trim(), authors,
       org: authors.length ? '' : (d.org || '').trim(), journal: (d.journal || '').trim(),
       volume: (d.volume || '').trim(), issue: (d.issue || '').trim(), range: (d.range || '').trim().replace(/\s*-\s*/, '–'),
-      publisher: (d.publisher || '').trim(), place: (d.place || '').trim(), doi: (d.doi || '').trim()
+      publisher: (d.publisher || '').trim(), place: (d.place || '').trim(), doi: (d.doi || '').trim(),
+      site: (d.site || '').trim(), url: (d.url || '').trim(), accessed: (d.accessed || '').trim()
     };
   }
   function updateSourcePreview() {
@@ -1834,6 +2054,7 @@
     if (!f) return;
     const draft = sourceFromForm();
     f.classList.toggle('is-article', draft.type === 'article');
+    f.classList.toggle('is-web', draft.type === 'web');
     const style = state.user.citation;
     const src = currentProject().sources.find(s => s.id === ui.editingSource);
     const n = sourceNumber(src);
@@ -1990,7 +2211,7 @@
     if (s.status === 'no-text') return `<span class="src-status warn">${t('src.noText')}</span>`;
     if (s.status === 'error') return `<span class="src-status warn">${t('src.error')}</span>`;
     if (s.status === 'missing') return `<span class="src-status warn">${t('src.missing')}</span>`;
-    if (s.status === 'ready') return `${s.pages} pp · ${t('src.passages', { n: s.passageCount || 0 })}${s.ocrPages ? ' · OCR' : ''}${isComplete(s) ? '' : ` · <span class="src-status warn">${t('src.needsDetails')}</span>`}`;
+    if (s.status === 'ready') return `${s.pages ? s.pages + ' pp · ' : ''}${t('src.passages', { n: s.passageCount || 0 })}${s.ocrPages ? ' · OCR' : ''}${isComplete(s) ? '' : ` · <span class="src-status warn">${t('src.needsDetails')}</span>`}`;
     return `${hasMeta(s) ? esc(inText(s, null, 'rmit-harvard').replace(/[()]/g, '')) : esc(s.file)}${s.pages ? ` · ${s.pages} pp` : ''}${s.size ? ` · ${s.size}` : ''}`;
   }
   function sourceListHTML(p) {
@@ -2008,7 +2229,7 @@
       ${p.sources.map(s => `
         <div class="source-row">
           <button class="source-item ${ui.lib.source === s.id ? 'active' : ''}" data-action="filter-source" data-id="${s.id}" title="${esc(s.file)}">
-            <span class="file-icon">PDF</span>
+            <span class="file-icon kind-${s.kind || 'pdf'}">${({ web: 'WEB', doc: 'DOC', text: 'TXT' })[s.kind] || 'PDF'}</span>
             <span class="source-text"><strong>${esc(s.title)}</strong><small>${sourceStatusLine(s)}</small>${hasMeta(s) ? `<small class="src-cite">${inText(s, null, 'rmit-harvard', 1, true)}</small>` : ''}</span>
             <span class="count-pill">${counts[s.id] ?? 0}</span>
           </button>
@@ -2438,7 +2659,7 @@
           <blockquote class="ev-excerpt"><span class="label-src"><i data-lucide="quote"></i>${t('ev.excerpt')}</span><p>“${esc(e.excerpt)}”</p></blockquote>
           <div class="ev-foot" style="margin-top:12px">
             <span class="ev-src"><i data-lucide="file-text"></i><span>${esc(src.file)}</span></span>
-            <span class="page-pill">${t('common.page', { n: e.page })}</span>
+            <span class="page-pill">${locLabel(e)}</span>
             <span class="ev-cite">${inText(src, e.page, state.user.citation, sourceNumber(src), true)}</span>
           </div>
           <div class="field" style="margin-top:14px"><label for="evTheme">${t('map.kindTheme')}</label>
@@ -2762,7 +2983,7 @@
   function closeModal() { $('#projectModal').hidden = true; document.body.style.overflow = ''; }
   function pdfsOnly(fileList) {
     const files = [...fileList];
-    const pdfs = files.filter(f => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
+    const pdfs = files.filter(f => /\.(pdf|docx|txt|md)$/i.test(f.name) || f.type === 'application/pdf');
     if (pdfs.length < files.length) toast(t('lib.skipped', { n: files.length - pdfs.length }), { icon: 'triangle-alert', type: 'warn' });
     return pdfs;
   }
@@ -3036,6 +3257,9 @@
       if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.animate([{ boxShadow: '0 0 0 4px rgba(82,96,200,.35)' }, { boxShadow: '0 0 0 0 rgba(82,96,200,0)' }], { duration: 1200 }); }
     },
     'upload-source': () => $('#sourceUpload').click(),
+    'add-link': () => { ui.linkTab = 'url'; openLinkModal(); },
+    'close-link': () => closeLinkModal(),
+    'link-tab': (el) => { ui.linkTab = el.dataset.tab; openLinkModal(); },
     'remove-file': (el) => { ui.pendingFiles.splice(+el.dataset.index, 1); renderPendingFiles(); },
     'view-in-map': (el) => { ui.mapSelected = 'e:' + el.dataset.id; navigate('map'); },
     'copy-ref': (el) => {
@@ -3186,7 +3410,8 @@
       ev.preventDefault(); ev.target.click();
     }
     if (ev.key === 'Escape') {
-      if ($('#srcModal') && !$('#srcModal').hidden) closeSourceEditor();
+      if ($('#linkModal') && !$('#linkModal').hidden) closeLinkModal();
+      else if ($('#srcModal') && !$('#srcModal').hidden) closeSourceEditor();
       else if (!$('#projectModal').hidden) closeModal();
       else if (!$('#refModal').hidden) closeRefs();
       else if ((ui.mapSelected || ui.linkFrom || ui.linkDraft) && currentPage() === 'map') { ui.mapSelected = null; ui.linkFrom = null; ui.linkDraft = null; drawMap(); }
@@ -3235,6 +3460,7 @@
     const f = ev.target;
     ev.preventDefault();
     if (f.id === 'projectForm') createProject(f);
+    if (f.id === 'linkForm2') submitLinkForm(f);
     if (f.id === 'linkForm') {
       const d = ui.linkDraft;
       if (d) {

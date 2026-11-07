@@ -1126,3 +1126,14 @@ code {
 }
 .welcome .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .guide-toggle.on { background: var(--accent-soft); color: var(--accent-text); }
+
+/* Non-PDF sources: links, pasted text, Word and .txt */
+.file-icon.kind-web { background: var(--accent-soft); color: var(--accent-text); }
+.file-icon.kind-doc { background: #e7eefb; color: #2b5797; }
+.file-icon.kind-text { background: var(--green-soft); color: var(--green); }
+.upload-row { display: flex; flex-direction: column; gap: 8px; }
+.link-tabs { margin-bottom: 16px; }
+#srcForm .web-only { display: none; }
+#srcForm.is-web div.field.web-only { display: flex; }
+#srcForm.is-web .field-row.web-only { display: grid; }
+#srcForm.is-web .book-only { display: none; }

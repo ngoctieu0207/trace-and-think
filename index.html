@@ -163,7 +163,7 @@
             <strong data-i18n="modal.drop">Drop PDF files here or browse</strong>
             <small data-i18n="modal.dropHint">PDF only · files stay on your device in this prototype</small>
           </label>
-          <input type="file" id="projectFiles" accept=".pdf,application/pdf" multiple hidden />
+          <input type="file" id="projectFiles" accept=".pdf,.docx,.txt,.md,application/pdf" multiple hidden />
           <ul class="file-list" id="projectFileList"></ul>
         </div>
       </form>
@@ -194,7 +194,7 @@
   </div>
 
   <!-- Hidden input for adding sources to the current project -->
-  <input type="file" id="sourceUpload" accept=".pdf,application/pdf" multiple hidden />
+  <input type="file" id="sourceUpload" accept=".pdf,.docx,.txt,.md,application/pdf" multiple hidden />
 
   <div class="toast-region" id="toasts" aria-live="polite"></div>
 
