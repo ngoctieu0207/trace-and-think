@@ -50,6 +50,11 @@
     // Common
     'common.cancel': ['Cancel', 'Huỷ'],
     'common.close': ['Close', 'Đóng'],
+    'confirm.title': ['Are you sure?', 'Xác nhận'],
+    'confirm.delete': ['Delete', 'Xoá'],
+    'confirm.deleteAll': ['Delete everything', 'Xoá toàn bộ'],
+    'confirm.replace': ['Replace', 'Thay thế'],
+    'confirm.continue': ['Continue', 'Tiếp tục'],
     'common.edit': ['Edit', 'Sửa'],
     'common.viewAll': ['See all', 'Xem tất cả'],
     'common.sources': ['{n} sources', '{n} tài liệu'],
@@ -2257,6 +2262,49 @@
     if (all && isUserProject()) all.textContent = passageTotal();
   }
 
+  /* ---------- Confirmation pop-up (replaces the browser's own confirm box) ----------
+     Returns a promise that resolves to true when the user confirms. */
+  function askConfirm(message, { ok = t('confirm.delete'), danger = true, icon = 'trash-2' } = {}) {
+    return new Promise(resolve => {
+      const prev = document.activeElement;
+      const wrap = document.createElement('div');
+      wrap.className = 'modal-backdrop confirm-backdrop';
+      wrap.innerHTML = `
+        <div class="modal confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="cfTitle" aria-describedby="cfMsg">
+          <div class="confirm-body">
+            <span class="confirm-icon ${danger ? 'danger' : ''}"><i data-lucide="${icon}"></i></span>
+            <div>
+              <h2 id="cfTitle">${t('confirm.title')}</h2>
+              <p id="cfMsg">${esc(message)}</p>
+            </div>
+          </div>
+          <footer class="modal-foot">
+            <button class="btn btn-ghost" type="button" data-cf="no">${t('common.cancel')}</button>
+            <button class="btn ${danger ? 'btn-danger-solid' : 'btn-primary'}" type="button" data-cf="yes">${esc(ok)}</button>
+          </footer>
+        </div>`;
+      const done = (answer) => {
+        document.removeEventListener('keydown', onKey, true);
+        wrap.remove();
+        if (prev && prev.focus) prev.focus();
+        resolve(answer);
+      };
+      const onKey = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); }
+        if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); done(true); }
+      };
+      wrap.addEventListener('mousedown', (e) => { if (e.target === wrap) done(false); });
+      wrap.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-cf]');
+        if (b) { e.stopPropagation(); done(b.dataset.cf === 'yes'); }
+      });
+      document.addEventListener('keydown', onKey, true);
+      document.body.appendChild(wrap);
+      icons();
+      wrap.querySelector(danger ? '[data-cf="no"]' : '[data-cf="yes"]').focus();
+    });
+  }
+
   /* ---------- Sharing a project as a file ----------
      Everything a teammate needs (sources' extracted text, saved quotes, map and outline) goes into one JSON file. */
   const fileSafe = (s) => String(s || 'project').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd')
@@ -2294,7 +2342,7 @@
     }
     const p = pack.project;
     if (state.projects.some(x => x.id === p.id)) {
-      if (!confirm(t('share.replaceConfirm', { t: L(p.title) }))) return;
+      if (!(await askConfirm(t('share.replaceConfirm', { t: L(p.title) }), { ok: t('confirm.replace'), danger: false, icon: 'file-down' }))) return;
       state.projects = state.projects.filter(x => x.id !== p.id);
     }
     const recs = new Map((pack.passages || []).filter(r => r && r.sourceId && Array.isArray(r.passages)).map(r => [r.sourceId, r]));
@@ -2440,12 +2488,12 @@
     });
   }
 
-  function autoGroup(confirmReplace) {
+  async function autoGroup(confirmReplace) {
     const p = currentProject();
     const m = mapFor(p.id);
     const evs = projectEvidence(p.id);
     if (evs.length < 2) { toast(t('map.needTwo'), { icon: 'info', type: 'warn' }); return; }
-    if (confirmReplace && m.themes.length && !confirm(t('map.regroupConfirm'))) return;
+    if (confirmReplace && m.themes.length && !(await askConfirm(t('map.regroupConfirm'), { ok: t('confirm.continue'), danger: false, icon: 'sparkles' }))) return;
     const groups = suggestThemes(evs, p);
     m.themes = groups.map((g, i) => ({ id: uid('t'), name: g.name, color: THEME_PALETTE[i % THEME_PALETTE.length] }));
     m.assign = {};
@@ -3308,10 +3356,10 @@
     },
     'export-project': (el, ev) => { ev.stopPropagation(); exportProject(el.dataset.id); },
     'import-project': () => $('#projectImport').click(),
-    'delete-project': (el, ev) => {
+    'delete-project': async (el, ev) => {
       ev.stopPropagation();
       const p = state.projects.find(x => x.id === el.dataset.id);
-      if (!p || !confirm(t('proj.confirmDelete', { t: L(p.title) }))) return;
+      if (!p || !(await askConfirm(t('proj.confirmDelete', { t: L(p.title) })))) return;
       state.projects = state.projects.filter(x => x.id !== p.id);
       delete state.saved[p.id]; delete state.outlines[p.id]; delete state.userEvidence[p.id]; delete state.maps[p.id];
       p.sources.forEach(s => { PASSAGES.delete(s.id); idb.del(s.id).catch(() => {}); });
@@ -3390,10 +3438,10 @@
       const th = mapFor().themes.find(x => x.id === el.dataset.id);
       if (th) { th.color = el.dataset.color; persist(); drawMap(); }
     },
-    'map-delete-theme': (el) => {
+    'map-delete-theme': async (el) => {
       const m = mapFor();
       const th = m.themes.find(x => x.id === el.dataset.id);
-      if (!th || !confirm(t('map.deleteThemeConfirm', { t: th.name }))) return;
+      if (!th || !(await askConfirm(t('map.deleteThemeConfirm', { t: th.name })))) return;
       m.themes = m.themes.filter(x => x.id !== th.id);
       Object.keys(m.assign).forEach(k => { if (m.assign[k] === th.id) delete m.assign[k]; });
       delete m.pos['t:' + th.id];
@@ -3430,10 +3478,10 @@
     },
     'edit-arg': (el) => { cancelNewArg(); ui.editingArg = el.dataset.id; refresh(); },
     'cancel-arg': () => { cancelNewArg(); ui.editingArg = null; refresh(); },
-    'delete-arg': (el) => {
+    'delete-arg': async (el) => {
       const o = outlineFor();
       const a = o.args.find(x => x.id === el.dataset.id);
-      if (!a || !confirm(t('b.confirmDel', { t: L(a.claim) || t('b.untitled') }))) return;
+      if (!a || !(await askConfirm(t('b.confirmDel', { t: L(a.claim) || t('b.untitled') })))) return;
       o.args = o.args.filter(x => x.id !== a.id);
       touchProject(); logActivity('trash-2', 'act.deletedSec', { t: truncate(L(a.claim), 50) }); commit(); refresh();
       toast(t('b.deleted'), { icon: 'trash-2' });
@@ -3455,8 +3503,8 @@
     'export-outline': () => exportOutline(),
 
     // Settings
-    'reset-demo': () => {
-      if (!confirm(t('set.resetConfirm'))) return;
+    'reset-demo': async () => {
+      if (!(await askConfirm(t('set.resetConfirm'), { ok: t('confirm.deleteAll') }))) return;
       const lang = state.lang;
       state = seedState(); state.lang = lang; state.seenLanding = true; state.tourDone = true;
       PASSAGES.clear(); idb.clear().catch(() => {});

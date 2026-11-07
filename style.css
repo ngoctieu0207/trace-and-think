@@ -1140,3 +1140,14 @@ code {
 
 /* Project sharing */
 .pc-tools { display: inline-flex; gap: 2px; }
+
+/* Confirmation pop-up */
+.confirm-backdrop { z-index: 400; }
+.confirm-box { width: min(420px, 100%); }
+.confirm-body { display: flex; gap: 14px; align-items: flex-start; padding: 22px 22px 18px; }
+.confirm-body h2 { font-size: 16px; margin-bottom: 6px; }
+.confirm-body p { color: var(--text-2); font-size: 13.5px; line-height: 1.55; }
+.confirm-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 11px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.confirm-icon.danger { background: var(--red-soft); color: var(--red); }
+.btn-danger-solid { background: var(--red); color: #fff; }
+.btn-danger-solid:hover { background: #a3403b; }
