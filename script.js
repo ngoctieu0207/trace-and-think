@@ -149,7 +149,7 @@
     'lib.sub': ['Ask your PDFs a question or search them. Keep the quotes you need, each one tied to its file and page.', 'Bạn có thể đặt câu hỏi hoặc tìm kiếm trong các tài liệu PDF. Mỗi đoạn trích bạn lưu đều ghi rõ tên tài liệu và số trang.'],
     'lib.addPdf': ['Add files', 'Thêm tệp'],
     'lib.refList': ['Reference list', 'Danh mục tham khảo'],
-    'lib.realNotice': ['Add PDFs, Word or .txt files, a link to an online article, or pasted text. Files are read here in the browser and never leave your computer; scanned pages are read with OCR.', 'Bạn có thể thêm tệp PDF, Word, .txt, link bài báo trực tuyến hoặc dán văn bản. Tệp được đọc ngay trên trình duyệt và không được gửi đến máy chủ nào; trang scan được nhận dạng bằng OCR.'],
+    'lib.realNotice': ['Add PDFs, Word or .txt files, a link to an online article, or pasted text.', 'Bạn có thể thêm tệp PDF, Word, .txt, link bài báo trực tuyến hoặc dán văn bản.'],
     'lib.sources': ['Your PDFs', 'Tài liệu PDF'],
     'lib.allSources': ['All files', 'Tất cả tài liệu'],
     'lib.allSourcesSub': ['Search everything', 'Tìm trong mọi tài liệu'],
