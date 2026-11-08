@@ -991,9 +991,11 @@ code {
 
 /* Source details & citations */
 .source-row { position: relative; }
-.source-row .source-item { padding-right: 40px; }
+.source-row .source-item { padding-right: 72px; }
 .source-edit { position: absolute; right: 6px; bottom: 6px; opacity: 0; transition: opacity .15s; background: var(--surface); }
-.source-row:hover .source-edit, .source-edit:focus-visible { opacity: 1; }
+.source-del { position: absolute; right: 38px; bottom: 6px; opacity: 0; transition: opacity .15s; background: var(--surface); }
+.source-del:hover { color: var(--red); }
+.source-row:hover .source-edit, .source-edit:focus-visible, .source-row:hover .source-del, .source-del:focus-visible { opacity: 1; }
 .source-edit.needs { opacity: 1; color: var(--amber); }
 .source-row .count-pill { position: absolute; right: 10px; top: 10px; }
 .src-cite { font-family: var(--serif); font-size: 12px !important; color: var(--text-2) !important; }
@@ -1151,3 +1153,10 @@ code {
 .confirm-icon.danger { background: var(--red-soft); color: var(--red); }
 .btn-danger-solid { background: var(--red); color: #fff; }
 .btn-danger-solid:hover { background: #a3403b; }
+
+/* Meaning-search status under the question box */
+.sem-status { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.sem-status svg { width: 13px; height: 13px; animation: spin 1s linear infinite; }
+.sem-status.ready { color: var(--green); }
+.sem-status.ready svg { animation: none; }
+.answer-meta svg { flex-shrink: 0; }

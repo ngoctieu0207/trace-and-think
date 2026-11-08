@@ -178,7 +178,9 @@
     'lib.noTextT': ['No readable PDFs yet', 'Chưa có tài liệu nào đọc được'],
     'lib.noTextS': ['Add the PDFs, Word files or links for this assignment. Normal files take a few seconds, scanned PDFs a bit longer.', 'Bạn hãy thêm tệp PDF, Word hoặc link cho bài tập này. Tệp thông thường được đọc trong vài giây, PDF scan sẽ mất thêm thời gian.'],
     'lib.thinking': ['Looking through {n} files…', 'Đang tìm trong {n} tài liệu…'],
-    'sem.loading': ['Loading the meaning-search model (first time only)… {n}%', 'Đang tải mô hình tìm theo nghĩa (chỉ lần đầu)… {n}%'],
+    'sem.loading': ['Getting meaning search ready (first time only)… {n}%', 'Đang chuẩn bị tìm theo nghĩa (chỉ lần đầu)… {n}%'],
+    'sem.ready': ['Meaning search is ready', 'Tìm theo nghĩa đã sẵn sàng'],
+    'sem.pendingNote': ['Meaning search is still getting ready, so this answer used keywords. Ask again in a moment for a closer match.', 'Tìm theo nghĩa đang được chuẩn bị nên câu trả lời này dùng từ khoá. Bạn hỏi lại sau ít phút sẽ có kết quả sát hơn.'],
     'sem.indexing': ['Analysing the meaning of your sources… {n}%', 'Đang phân tích nghĩa của tài liệu… {n}%'],
     'lib.pdfAnswer': ['From your PDFs', 'Trích từ tài liệu của bạn'],
     'lib.pdfNote': ['These are exact sentences from your files, ranked on your computer. Nothing is made up, but do read the full quote before citing it.', 'Đây là nguyên văn các câu trong tài liệu, được xếp hạng ngay trên máy của bạn. Web không tự tạo nội dung, tuy vậy bạn nên đọc kỹ cả đoạn trước khi trích dẫn.'],
@@ -213,6 +215,9 @@
     'src.failed': ['Couldn’t read {f}', 'Không thể đọc {f}'],
     'src.ocrLimit': ['Only the first {n} scanned pages were read.', 'Web chỉ nhận dạng {n} trang scan đầu tiên.'],
     'src.edit': ['Edit reference details', 'Sửa thông tin trích dẫn'],
+    'src.delete': ['Remove source', 'Xoá tài liệu'],
+    'src.deleteConfirm': ['Remove “{t}”? Quotes you saved from it will also be removed from your library, map and outline.', 'Bạn có chắc muốn xoá “{t}”? Các đoạn trích đã lưu từ tài liệu này cũng sẽ bị xoá khỏi kho, sơ đồ và dàn ý.'],
+    'src.deleted': ['Source removed', 'Đã xoá tài liệu'],
     'src.addDetails': ['Add author and year', 'Thêm tác giả và năm'],
     'src.needsDetails': ['no author or year', 'thiếu tác giả và năm'],
     'src.editTitle': ['Reference details', 'Thông tin trích dẫn'],
@@ -434,6 +439,7 @@
     'act.addedSec': ['Added the section “{t}”', 'Đã thêm ý “{t}”'],
     'act.editedSec': ['Edited “{t}”', 'Đã sửa ý “{t}”'],
     'act.deletedSec': ['Deleted “{t}”', 'Đã xoá ý “{t}”'],
+    'act.deletedSource': ['Removed {f}', 'Đã xoá tài liệu {f}'],
     'act.linked': ['Added a quote to “{a}”', 'Đã gắn đoạn trích vào ý “{a}”'],
     'act.thesis': ['Updated the main argument', 'Đã cập nhật luận điểm chính'],
     'act.grouped': ['Grouped quotes into {n} themes', 'Đã phân các đoạn trích thành {n} chủ đề'],
@@ -1408,6 +1414,7 @@
               <textarea id="askInput" rows="1" placeholder="${t('lib.askPh')}" aria-label="${t('lib.ask')}"></textarea>
               <button class="btn btn-primary" type="submit" ${ui.asking ? 'disabled' : ''}><i data-lucide="arrow-up"></i>${t('lib.askBtn')}</button>
             </form>
+            <p class="sem-status" id="semStatus" hidden></p>
           </section>
 
           <div id="answerArea"></div>
@@ -1435,6 +1442,8 @@
 
     renderAnswer();
     renderEvidenceList();
+    if (ui.semStatus) setSemStatus(ui.semStatus.key, ui.semStatus.params);
+    setTimeout(warmUpMeaningSearch, 800);   // get meaning search ready while the student reads or types
   }
 
   /* Saved evidence (optionally filtered), or live search results across the PDFs' text */
@@ -1511,6 +1520,7 @@
         <div class="answer-body">${body}</div>
         ${a.tip ? `<p class="answer-meta tip"><i data-lucide="lightbulb"></i>${esc(L(a.tip))}</p>` : ''}
         <p class="answer-disclaimer"><i data-lucide="shield-check"></i>${t('lib.pdfNote')}${a.machineTranslated && state.lang === 'vi' ? ' ' + t('lib.translatedNote') : ''}</p>
+        ${a.semPending ? `<p class="answer-meta"><i data-lucide="loader-circle"></i>${t('sem.pendingNote')}</p>` : ''}
         ${a.evidence.length ? `
           <div class="answer-refs">
             <h4>${t('lib.supporting', { n: a.evidence.length })}</h4>
@@ -1732,6 +1742,7 @@
 
   /* Save extracted passages, look up a DOI if there is one, and report the result */
   async function storePassages(src, passages, ocrUsed = 0, foundDoi = null) {
+    if (src.deleted) return;   // removed while it was still being read
     const rec = { sourceId: src.id, passages };
     PASSAGES.set(src.id, rec);
     try { await idb.put(rec); } catch (e) { /* storage full or blocked, keep in memory */ }
@@ -1750,6 +1761,7 @@
 
   function afterRead(pid, src) {
     delete src.progress; delete src.ocr;
+    if (src.status === 'ready' && currentPage() === 'evidence') setTimeout(warmUpMeaningSearch, 500);
     indexCache.key = '';
     touchProject(pid);
     persist();
@@ -2184,6 +2196,20 @@
     if (el) el.textContent = text;
   }
 
+  let embedder = null;        // the loaded model, once ready
+  let indexing = null;        // background job that computes passage vectors
+
+  /* Small status line under the question box, so students can see the model getting ready */
+  function setSemStatus(key, params) {
+    ui.semStatus = key ? { key, params } : null;
+    const el = $('#semStatus');
+    if (!el) return;
+    el.hidden = !key;
+    if (key) el.innerHTML = `<i data-lucide="${key === 'sem.ready' ? 'circle-check' : 'loader-circle'}"></i><span>${t(key, params)}</span>`;
+    el.classList.toggle('ready', key === 'sem.ready');
+    icons();
+  }
+
   function getEmbedder() {
     if (embedUnavailable) return Promise.resolve(null);
     if (!embedderPromise) {
@@ -2197,17 +2223,33 @@
             if (e.status !== 'progress' || !e.total) return;
             files[e.file] = [e.loaded, e.total];
             const [loaded, total] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
-            setThinking(t('sem.loading', { n: Math.round(loaded / total * 100) }));
+            setSemStatus('sem.loading', { n: Math.round(loaded / total * 100) });
           }
         });
-      })().catch(err => {
+      })().then(model => { embedder = model; return model; }).catch(err => {
         console.warn('Meaning search unavailable, using keywords only', err);
         embedUnavailable = true;
         embedderPromise = null;
+        setSemStatus(null);
         return null;
       });
     }
     return embedderPromise;
+  }
+
+  /* Load the model and index the current project in the background, so questions do not have to wait */
+  function warmUpMeaningSearch() {
+    const p = currentProject();
+    if (embedUnavailable || !p || !p.sources.some(s => s.status === 'ready')) return;
+    getEmbedder().then(model => {
+      if (!model || indexing) return;
+      const proj = currentProject();
+      if (!proj) return;
+      indexing = ensureVectors(proj, model)
+        .then(() => setSemStatus('sem.ready'))
+        .catch(err => console.warn(err))
+        .finally(() => { indexing = null; });
+    });
   }
 
   async function embedTexts(extractor, texts) {
@@ -2232,7 +2274,9 @@
         const batch = rec.passages.slice(i, i + 16).map(x => x.text);
         vecs.push(...await embedTexts(extractor, batch));
         done += batch.length;
-        setThinking(t('sem.indexing', { n: Math.round(done / total * 100) }));
+        const pct = Math.round(done / total * 100);
+        setThinking(t('sem.indexing', { n: pct }));
+        setSemStatus('sem.indexing', { n: pct });
       }
       rec.vecs = vecs;
       rec.embModel = EMBED_MODEL;
@@ -2276,7 +2320,9 @@
       if (translatedQ) searchQ = translatedQ + ' ' + question;
     }
     // Meaning search when the model is available; keyword search otherwise
-    let extractor = await getEmbedder();
+    let extractor = embedder;                 // use the model only if it is already loaded
+    if (indexing) extractor = null;            // still indexing in the background: do not make the student wait
+    if (!extractor) warmUpMeaningSearch();    // otherwise answer with keywords now and get it ready for next time
     let qVec = null;
     if (extractor) {
       try {
@@ -2335,6 +2381,7 @@
       intro: pair('ans.pdfIntro', { n: found.length, f: files }),
       text: { en: original, vi: vi || original },
       machineTranslated: !!vi,
+      semPending: !qVec && !embedUnavailable,
       evidence: found.map(e => e.id)
     };
   }
@@ -2368,6 +2415,7 @@
             <span class="count-pill">${counts[s.id] ?? 0}</span>
           </button>
           <button class="icon-btn sm source-edit ${isComplete(s) ? '' : 'needs'}" data-action="edit-source" data-id="${s.id}" title="${t('src.edit')}" aria-label="${t('src.edit')}"><i data-lucide="${isComplete(s) ? 'pencil' : 'circle-alert'}"></i></button>
+          <button class="icon-btn sm source-del" data-action="delete-source" data-id="${s.id}" title="${t('src.delete')}" aria-label="${t('src.delete')}"><i data-lucide="trash-2"></i></button>
         </div>`).join('')}`;
   }
   function updateSourcesUI() {
@@ -3445,6 +3493,37 @@
     'tour-skip': () => endTour(false),
 
     // Projects
+    'delete-source': async (el, ev) => {
+      ev.stopPropagation();
+      const p = currentProject();
+      const src = p && p.sources.find(s => s.id === el.dataset.id);
+      if (!src || !(await askConfirm(t('src.deleteConfirm', { t: src.title || src.file })))) return;
+      src.deleted = true;   // a read still in progress will not store its result
+      p.sources = p.sources.filter(s => s.id !== src.id);
+      PASSAGES.delete(src.id);
+      idb.del(src.id).catch(() => {});
+      // Remove quotes that came from this source everywhere they are used
+      const fromSrc = (id) => id.startsWith(`u${src.id}_`);
+      state.saved[p.id] = savedList(p.id).filter(id => !fromSrc(id));
+      const store = state.userEvidence[p.id] || {};
+      Object.keys(store).filter(fromSrc).forEach(id => { delete store[id]; });
+      Object.keys(ui.resultCache).filter(fromSrc).forEach(id => { delete ui.resultCache[id]; });
+      (outlineFor(p.id).args || []).forEach(a => { a.evidence = a.evidence.filter(id => !fromSrc(id)); });
+      const m = state.maps[p.id];
+      if (m) {
+        Object.keys(m.assign).filter(fromSrc).forEach(id => { delete m.assign[id]; });
+        Object.keys(m.pos).filter(k => k.startsWith(`e:u${src.id}_`)).forEach(k => { delete m.pos[k]; });
+        m.links = m.links.filter(l => !fromSrc(l.a) && !fromSrc(l.b));
+      }
+      if (ui.lib.source === src.id) ui.lib.source = 'all';
+      if (ui.answer && ui.answer.evidence.some(fromSrc)) ui.answer = null;
+      indexCache.key = '';
+      touchProject();
+      logActivity('trash-2', 'act.deletedSource', { f: src.title || src.file });
+      commit();
+      renderPage({ keepScroll: true });
+      toast(t('src.deleted'), { icon: 'trash-2' });
+    },
     'edit-source': (el, ev) => { ev.stopPropagation(); openSourceEditor(el.dataset.id); },
     'close-src': () => closeSourceEditor(),
     'lookup-doi': async (el) => {
