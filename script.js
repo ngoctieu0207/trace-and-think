@@ -2205,28 +2205,79 @@
     const el = $('#semStatus');
     if (!el) return;
     el.hidden = !key;
-    if (key) el.innerHTML = `<i data-lucide="${key === 'sem.ready' ? 'circle-check' : 'loader-circle'}"></i><span>${t(key, params)}</span>`;
+    if (!key) return;
+    const span = el.querySelector('span');
+    if (span && el.dataset.key === key) { span.textContent = t(key, params); return; }   // only the number changed
+    el.dataset.key = key;
+    el.innerHTML = `<i data-lucide="${key === 'sem.ready' ? 'circle-check' : 'loader-circle'}"></i><span>${t(key, params)}</span>`;
     el.classList.toggle('ready', key === 'sem.ready');
     icons();
   }
 
+  /* The model runs in a Web Worker so reading the documents never freezes the page */
+  const EMBED_WORKER = `
+    let pipe = null;
+    self.onmessage = async ({ data }) => {
+      if (data.type === 'init') {
+        try {
+          const { pipeline, env } = await import(data.url);
+          env.allowLocalModels = false;
+          const files = {}; let last = -1;
+          pipe = await pipeline('feature-extraction', data.model, {
+            dtype: 'q8',
+            progress_callback: (e) => {
+              if (e.status !== 'progress' || !e.total) return;
+              files[e.file] = [e.loaded, e.total];
+              let a = 0, b = 0;
+              for (const [x, y] of Object.values(files)) { a += x; b += y; }
+              const n = Math.round(a / b * 100);
+              if (n !== last) { last = n; self.postMessage({ type: 'progress', n }); }
+            }
+          });
+          self.postMessage({ type: 'ready' });
+        } catch (err) { self.postMessage({ type: 'error', message: String(err) }); }
+      } else if (data.type === 'embed') {
+        try {
+          const res = await pipe(data.texts, { pooling: 'mean', normalize: true });
+          const vecs = res.tolist().map(v => Float32Array.from(v));
+          self.postMessage({ type: 'vecs', id: data.id, vecs }, vecs.map(v => v.buffer));
+        } catch (err) { self.postMessage({ type: 'vecs', id: data.id, error: String(err) }); }
+      }
+    };`;
+
   function getEmbedder() {
     if (embedUnavailable) return Promise.resolve(null);
     if (!embedderPromise) {
-      embedderPromise = (async () => {
-        const { pipeline, env } = await import(TRANSFORMERS_URL);
-        env.allowLocalModels = false;
-        const files = {};
-        return await pipeline('feature-extraction', EMBED_MODEL, {
-          dtype: 'q8',
-          progress_callback: (e) => {
-            if (e.status !== 'progress' || !e.total) return;
-            files[e.file] = [e.loaded, e.total];
-            const [loaded, total] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
-            setSemStatus('sem.loading', { n: Math.round(loaded / total * 100) });
+      embedderPromise = new Promise((resolve, reject) => {
+        const worker = new Worker(URL.createObjectURL(new Blob([EMBED_WORKER], { type: 'text/javascript' })), { type: 'module' });
+        const waiting = new Map();
+        let next = 0;
+        const model = {
+          embed: (texts) => new Promise((res, rej) => {
+            const id = ++next;
+            waiting.set(id, { res, rej });
+            worker.postMessage({ type: 'embed', id, texts });
+          })
+        };
+        worker.onmessage = ({ data }) => {
+          if (data.type === 'progress') setSemStatus('sem.loading', { n: data.n });
+          else if (data.type === 'ready') resolve(model);
+          else if (data.type === 'error') reject(new Error(data.message));
+          else if (data.type === 'vecs') {
+            const w = waiting.get(data.id);
+            waiting.delete(data.id);
+            if (w) data.error ? w.rej(new Error(data.error)) : w.res(data.vecs);
           }
-        });
-      })().then(model => { embedder = model; return model; }).catch(err => {
+        };
+        worker.onerror = (e) => {
+          waiting.forEach(w => w.rej(new Error('worker failed')));
+          waiting.clear();
+          embedder = null;
+          embedUnavailable = true;   // fall back to keyword search
+          reject(e);
+        };
+        worker.postMessage({ type: 'init', url: TRANSFORMERS_URL, model: EMBED_MODEL });
+      }).then(model => { embedder = model; return model; }).catch(err => {
         console.warn('Meaning search unavailable, using keywords only', err);
         embedUnavailable = true;
         embedderPromise = null;
@@ -2255,8 +2306,7 @@
   async function embedTexts(extractor, texts) {
     const out = [];
     for (let i = 0; i < texts.length; i += 16) {
-      const res = await extractor(texts.slice(i, i + 16), { pooling: 'mean', normalize: true });
-      res.tolist().forEach(v => out.push(Float32Array.from(v)));
+      out.push(...await extractor.embed(texts.slice(i, i + 16)));
     }
     return out;
   }
