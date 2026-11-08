@@ -178,6 +178,8 @@
     'lib.noTextT': ['No readable PDFs yet', 'Chưa có tài liệu nào đọc được'],
     'lib.noTextS': ['Add the PDFs, Word files or links for this assignment. Normal files take a few seconds, scanned PDFs a bit longer.', 'Bạn hãy thêm tệp PDF, Word hoặc link cho bài tập này. Tệp thông thường được đọc trong vài giây, PDF scan sẽ mất thêm thời gian.'],
     'lib.thinking': ['Looking through {n} files…', 'Đang tìm trong {n} tài liệu…'],
+    'sem.loading': ['Loading the meaning-search model (first time only)… {n}%', 'Đang tải mô hình tìm theo nghĩa (chỉ lần đầu)… {n}%'],
+    'sem.indexing': ['Analysing the meaning of your sources… {n}%', 'Đang phân tích nghĩa của tài liệu… {n}%'],
     'lib.pdfAnswer': ['From your PDFs', 'Trích từ tài liệu của bạn'],
     'lib.pdfNote': ['These are exact sentences from your files, ranked on your computer. Nothing is made up, but do read the full quote before citing it.', 'Đây là nguyên văn các câu trong tài liệu, được xếp hạng ngay trên máy của bạn. Web không tự tạo nội dung, tuy vậy bạn nên đọc kỹ cả đoạn trước khi trích dẫn.'],
     'lib.translatedNote': ['Translated on your computer by Chrome.', 'Phần dịch được Chrome thực hiện ngay trên máy.'],
@@ -1484,7 +1486,7 @@
     const area = $('#answerArea');
     if (!area) return;
     if (ui.asking) {
-      area.innerHTML = `<div class="panel thinking"><span class="bars"><span></span><span></span><span></span></span>${t('lib.thinking', { n: currentProject().sources.length })}</div>`;
+      area.innerHTML = `<div class="panel thinking"><span class="bars"><span></span><span></span><span></span></span><span class="thinking-text">${t('lib.thinking', { n: currentProject().sources.length })}</span></div>`;
       return;
     }
     if (!ui.answer) { area.innerHTML = ''; return; }
@@ -2168,6 +2170,97 @@
     }
   }
 
+  /* ---------- Meaning-based search ----------
+     A small multilingual model (transformers.js) runs in the browser and turns each passage and the question
+     into a vector. Passages close in meaning are found even when they share no words with the question,
+     and a Vietnamese question can match an English passage. The model is downloaded once and cached. */
+  const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2/dist/transformers.min.js';
+  const EMBED_MODEL = 'Xenova/paraphrase-multilingual-MiniLM-L12-v2';
+  let embedderPromise = null;
+  let embedUnavailable = false;
+
+  function setThinking(text) {
+    const el = $('#answerArea .thinking-text');
+    if (el) el.textContent = text;
+  }
+
+  function getEmbedder() {
+    if (embedUnavailable) return Promise.resolve(null);
+    if (!embedderPromise) {
+      embedderPromise = (async () => {
+        const { pipeline, env } = await import(TRANSFORMERS_URL);
+        env.allowLocalModels = false;
+        const files = {};
+        return await pipeline('feature-extraction', EMBED_MODEL, {
+          dtype: 'q8',
+          progress_callback: (e) => {
+            if (e.status !== 'progress' || !e.total) return;
+            files[e.file] = [e.loaded, e.total];
+            const [loaded, total] = Object.values(files).reduce((a, [x, y]) => [a[0] + x, a[1] + y], [0, 0]);
+            setThinking(t('sem.loading', { n: Math.round(loaded / total * 100) }));
+          }
+        });
+      })().catch(err => {
+        console.warn('Meaning search unavailable, using keywords only', err);
+        embedUnavailable = true;
+        embedderPromise = null;
+        return null;
+      });
+    }
+    return embedderPromise;
+  }
+
+  async function embedTexts(extractor, texts) {
+    const out = [];
+    for (let i = 0; i < texts.length; i += 16) {
+      const res = await extractor(texts.slice(i, i + 16), { pooling: 'mean', normalize: true });
+      res.tolist().forEach(v => out.push(Float32Array.from(v)));
+    }
+    return out;
+  }
+  const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; };
+
+  /* Give every readable source a vector per passage (computed once, then kept in IndexedDB) */
+  async function ensureVectors(p, extractor) {
+    const todo = p.sources.filter(s => s.status === 'ready' && PASSAGES.has(s.id)).map(s => PASSAGES.get(s.id))
+      .filter(rec => rec.embModel !== EMBED_MODEL || !rec.vecs || rec.vecs.length !== rec.passages.length);
+    const total = todo.reduce((n, r) => n + r.passages.length, 0);
+    let done = 0;
+    for (const rec of todo) {
+      const vecs = [];
+      for (let i = 0; i < rec.passages.length; i += 16) {
+        const batch = rec.passages.slice(i, i + 16).map(x => x.text);
+        vecs.push(...await embedTexts(extractor, batch));
+        done += batch.length;
+        setThinking(t('sem.indexing', { n: Math.round(done / total * 100) }));
+      }
+      rec.vecs = vecs;
+      rec.embModel = EMBED_MODEL;
+      try { await idb.put(rec); } catch (e) { /* keep in memory */ }
+    }
+  }
+
+  /* Rank passages by meaning and by keywords, then merge the two lists (reciprocal rank fusion) */
+  function hybridSearch(p, query, qVec, limit = 6) {
+    const fused = new Map();
+    const add = (rank, data) => {
+      const cur = fused.get(data.id) || { score: 0, data };
+      cur.score += 1 / (60 + rank);
+      if (data.terms && !cur.data.terms) cur.data = { ...cur.data, terms: data.terms };
+      fused.set(data.id, cur);
+    };
+    const ms = getIndex(p);
+    if (ms) ms.search(query).slice(0, 20).forEach((r, i) => add(i, r));
+    const sem = [];
+    p.sources.filter(s => s.status === 'ready' && PASSAGES.has(s.id)).forEach(s => {
+      const rec = PASSAGES.get(s.id);
+      if (!rec.vecs) return;
+      rec.passages.forEach((ps, i) => sem.push({ id: `u${s.id}_${ps.i}`, sourceId: s.id, page: ps.page, text: ps.text, sim: dot(qVec, rec.vecs[i]) }));
+    });
+    sem.sort((a, b) => b.sim - a.sim).slice(0, 20).forEach((r, i) => add(i, r));
+    return [...fused.values()].sort((a, b) => b.score - a.score).slice(0, limit).map(x => toEvidence(p.id, x.data));
+  }
+
   /* Answer a question from the project's own PDFs: rank passages, then pick the most relevant sentences */
   async function answerFromPdfs(question) {
     const p = currentProject();
@@ -2182,29 +2275,52 @@
       translatedQ = await translateText(question, 'vi', 'en');
       if (translatedQ) searchQ = translatedQ + ' ' + question;
     }
-    const found = searchPassages(searchQ, 6);
-    const tip = qVi && !docVi && !translatedQ ? pair('ans.tipEn') : null;
+    // Meaning search when the model is available; keyword search otherwise
+    let extractor = await getEmbedder();
+    let qVec = null;
+    if (extractor) {
+      try {
+        await ensureVectors(p, extractor);
+        qVec = (await embedTexts(extractor, [translatedQ ? `${question} ${translatedQ}` : question]))[0];
+      } catch (e) { console.warn(e); extractor = null; }
+    }
+    setThinking(t('lib.thinking', { n: p.sources.length }));
+    const found = qVec ? hybridSearch(p, searchQ, qVec, 6) : searchPassages(searchQ, 6);
+    const tip = !qVec && qVi && !docVi && !translatedQ ? pair('ans.tipEn') : null;
     if (!found.length) return { question, translatedQ, mode: 'pdf', text: pair('ans.noPassage'), tip, evidence: [] };
 
-    const terms = queryTerms(searchQ);
-    const candidates = [];
-    found.forEach((ev, rank) => {
-      splitSentences(ev.excerpt).forEach(s => {
-        if (s.length < 40) return;
-        const low = s.toLowerCase();
-        const hits = terms.filter(x => low.includes(x)).length;
-        if (hits) candidates.push({ s, ev, rank, score: hits + (found.length - rank) * 0.25 });
-      });
-    });
-    candidates.sort((a, b) => b.score - a.score);
     const picked = [];
-    for (const c of candidates) {
-      if (picked.length >= 4) break;
-      if (picked.some(x => x.s === c.s) || picked.filter(x => x.ev === c.ev).length >= 2) continue;
-      picked.push(c);
+    const takeBest = (list, max) => {
+      for (const c of list) {
+        if (picked.length >= max) break;
+        if (picked.some(x => x.s === c.s) || picked.filter(x => x.ev === c.ev).length >= 2) continue;
+        picked.push(c);
+      }
+    };
+    if (qVec) {
+      // Pick the sentences whose meaning is closest to the question
+      const sents = [];
+      found.slice(0, 5).forEach((ev, rank) => splitSentences(ev.excerpt).forEach(s => { if (s.length >= 40) sents.push({ s, ev, rank }); }));
+      const vecs = sents.length ? await embedTexts(extractor, sents.map(x => x.s)) : [];
+      sents.forEach((x, i) => { x.score = dot(qVec, vecs[i]); });
+      const ranked = sents.sort((a, b) => b.score - a.score);
+      const best = ranked.length ? ranked[0].score : 0;
+      takeBest(ranked.filter(x => x.score >= best - 0.12), 3);   // only sentences nearly as close as the best one
+    } else {
+      const terms = queryTerms(searchQ);
+      const candidates = [];
+      found.forEach((ev, rank) => {
+        splitSentences(ev.excerpt).forEach(s => {
+          if (s.length < 40) return;
+          const low = s.toLowerCase();
+          const hits = terms.filter(x => low.includes(x)).length;
+          if (hits) candidates.push({ s, ev, rank, score: hits + (found.length - rank) * 0.25 });
+        });
+      });
+      takeBest(candidates.sort((a, b) => b.score - a.score), 4);
     }
     if (!picked.length) picked.push({ s: splitSentences(found[0].excerpt)[0], ev: found[0], rank: 0 });
-    picked.sort((a, b) => a.rank - b.rank);
+    if (!qVec) picked.sort((a, b) => a.rank - b.rank);   // with meaning search, the closest sentence comes first
 
     const original = picked.map(c => `${esc(c.s)} {${c.ev.id}}`).join(' ');
     let vi = null;
@@ -2320,7 +2436,7 @@
       outline: state.outlines[pid] || null,
       map: state.maps[pid] || null,
       evidence: state.userEvidence[pid] || {},
-      passages: p.sources.map(s => PASSAGES.get(s.id)).filter(Boolean)
+      passages: p.sources.map(s => PASSAGES.get(s.id)).filter(Boolean).map(r => ({ sourceId: r.sourceId, passages: r.passages }))
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(pack)], { type: 'application/json' }));
     const a = document.createElement('a');
